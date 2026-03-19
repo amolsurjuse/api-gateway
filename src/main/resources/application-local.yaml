@@ -29,4 +29,5 @@ gateway:
     subscription: http://127.0.0.1:8086
     payment: http://127.0.0.1:8083
     charger-management: http://127.0.0.1:8086
+    charger: http://127.0.0.1:8086
     ws-connector: http://127.0.0.1:8091

@@ -130,6 +130,16 @@ app:
         path-pattern: "/charger-management/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: charger-admin-service
+        methods: [ "*" ]
+        path-pattern: "/charger/api/v1/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: charger-service
+        methods: [ "*" ]
+        path-pattern: "/charger/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
       - name: web-socket-connector
         methods: [ "*" ]
         path-pattern: "/ws/**"
@@ -146,4 +156,5 @@ gateway:
     subscription: ${GATEWAY_ROUTE_SUBSCRIPTION:http://subscription-service:8086}
     payment: ${GATEWAY_ROUTE_PAYMENT:http://payment-service:8083}
     charger-management: ${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}
+    charger: ${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}

@@ -7,9 +7,8 @@ RUN mvn -q -DskipTests clean package
 
 FROM eclipse-temurin:21
 WORKDIR /app
-RUN groupadd -r appgroup && useradd -r -g appgroup -u 1000 appuser
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
-COPY --from=build /workspace/target/*.jar /app/app.jar
-USER appuser
+COPY --from=build --chown=1000:1000 /workspace/target/*.jar /app/app.jar
+USER 1000:1000
 EXPOSE 8090
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

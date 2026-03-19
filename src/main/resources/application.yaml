@@ -42,6 +42,8 @@ app:
       secret: ${APP_SECURITY_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_64+_CHAR_SECRET_CHANGE_ME}
   cors:
     allowed-origin-patterns:
+      - "http://localhost:*"
+      - "http://127.0.0.1:*"
       - "http://localhost:4200"
       - "http://localhost:4201"
       - "http://localhost:4211"

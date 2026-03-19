@@ -1,0 +1,67 @@
+server:
+  port: ${SERVER_PORT:8090}
+
+spring:
+  application:
+    name: api-gateway
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      lettuce:
+        pool:
+          enabled: true
+          max-active: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_ACTIVE:8}
+          max-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MAX_IDLE:8}
+          min-idle: ${SPRING_DATA_REDIS_LETTUCE_POOL_MIN_IDLE:2}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.electrahub.gateway: ${LOGGING_LEVEL_COM_ELECTRAHUB_GATEWAY:INFO}
+    org.springframework: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
+app:
+  security:
+    jwt:
+      issuer: ${APP_SECURITY_JWT_ISSUER:auth-service}
+      secret: ${APP_SECURITY_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_64+_CHAR_SECRET_CHANGE_ME}
+  cors:
+    allowed-origin-patterns:
+      - "http://localhost:4200"
+      - "http://localhost:4201"
+      - "http://localhost:4211"
+      - "http://localhost:8080"
+      - "http://driver-portal-dev.electrahub.com:8080"
+      - "https://driver-portal-dev.electrahub.com"
+      - "https://driver-portal-dev.electrahub.com:8443"
+      - "https://driver-portal-*.electrahub.com"
+      - "https://driver-portal-*.electrahub.com:*"
+      - "https://dev.electrahub.com"
+      - "https://dev.electrahub.com:8443"
+  redis:
+    denylist-prefix: ${APP_REDIS_DENYLIST_PREFIX:deny:jwt:}
+    token-version-prefix: ${APP_REDIS_TOKEN_VERSION_PREFIX:tv:}
+
+gateway:
+  routes:
+    auth: ${GATEWAY_ROUTE_AUTH:http://auth-service:8080}
+    user: ${GATEWAY_ROUTE_USER:http://user-service:8082}
+    subscription: ${GATEWAY_ROUTE_SUBSCRIPTION:http://subscription-service:8086}
+    payment: ${GATEWAY_ROUTE_PAYMENT:http://payment-service:8083}
+    charger-management: ${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}
+    ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}

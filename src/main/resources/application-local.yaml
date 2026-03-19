@@ -1,0 +1,32 @@
+server:
+  port: 8090
+
+spring:
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ""
+
+logging:
+  level:
+    com.electrahub.gateway: DEBUG
+
+management:
+  health:
+    redis:
+      enabled: false
+
+app:
+  security:
+    jwt:
+      secret: "CHANGE_ME_TO_A_LONG_RANDOM_64+_CHAR_SECRET_CHANGE_ME"
+
+gateway:
+  routes:
+    auth: http://127.0.0.1:8080
+    user: http://127.0.0.1:8082
+    subscription: http://127.0.0.1:8086
+    payment: http://127.0.0.1:8083
+    charger-management: http://127.0.0.1:8086
+    ws-connector: http://127.0.0.1:8091

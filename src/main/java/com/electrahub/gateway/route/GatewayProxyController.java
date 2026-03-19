@@ -37,6 +37,18 @@ public class GatewayProxyController {
             "proxy-authorization", "te", "trailer", "transfer-encoding",
             "upgrade", "content-length"
     );
+    /**
+     * CORS headers are managed centrally at API Gateway SecurityConfig.
+     * Strip backend CORS headers to avoid duplicate Access-Control-* values.
+     */
+    private static final Set<String> GATEWAY_MANAGED_CORS_RESPONSE_HEADERS = Set.of(
+            "access-control-allow-origin",
+            "access-control-allow-methods",
+            "access-control-allow-headers",
+            "access-control-expose-headers",
+            "access-control-allow-credentials",
+            "access-control-max-age"
+    );
 
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
@@ -95,7 +107,8 @@ public class GatewayProxyController {
 
                 HttpHeaders responseHeaders = new HttpHeaders();
                 res.getHeaders().forEach((name, values) -> {
-                    if (!HOP_BY_HOP_HEADERS.contains(name.toLowerCase())) {
+                    String lowerName = name.toLowerCase();
+                    if (!HOP_BY_HOP_HEADERS.contains(lowerName) && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
                         responseHeaders.addAll(name, values);
                     }
                 });

@@ -60,7 +60,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (denylistService.isDenied(parsed.jti())) {
+            if (isDenied(parsed.jti(), request.getRequestURI())) {
                 log.debug("JWT rejected: denylisted jti={} path={}",
                         parsed.jti(), request.getRequestURI());
                 chain.doFilter(request, response);
@@ -68,7 +68,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
             UUID userId = UUID.fromString(parsed.uid());
-            long currentVersion = tokenVersionService.getVersion(userId);
+            long currentVersion = resolveCurrentTokenVersion(userId, parsed.tv(), request.getRequestURI());
             if (parsed.tv() != currentVersion) {
                 log.debug("JWT rejected: tokenVersion mismatch uid={} tokenTv={} currentTv={} path={}",
                         userId, parsed.tv(), currentVersion, request.getRequestURI());
@@ -100,5 +100,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private boolean isDenied(String jti, String path) {
+        try {
+            return denylistService.isDenied(jti);
+        } catch (RuntimeException ex) {
+            // Fail open for denylist/version checks when Redis is unavailable.
+            // JWT signature + expiration + issuer validation still apply.
+            log.warn("Redis denylist check unavailable; proceeding with JWT-only validation path={} reason={}",
+                    path, ex.getMessage());
+            return false;
+        }
+    }
+
+    private long resolveCurrentTokenVersion(UUID userId, long tokenVersionFromJwt, String path) {
+        try {
+            return tokenVersionService.getVersion(userId);
+        } catch (RuntimeException ex) {
+            // Preserve availability if Redis is down by trusting token version claim.
+            log.warn("Redis token-version check unavailable; using JWT token version path={} uid={} reason={}",
+                    path, userId, ex.getMessage());
+            return tokenVersionFromJwt;
+        }
     }
 }

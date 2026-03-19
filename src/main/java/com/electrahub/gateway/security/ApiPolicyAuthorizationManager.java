@@ -18,6 +18,7 @@ import org.springframework.util.AntPathMatcher;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -63,8 +64,8 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
             matchedAnyRule = true;
             if (rule.effect() == RbacProperties.Decision.DENY) {
                 if (log.isDebugEnabled()) {
-                    log.debug("RBAC decision: method={} path={} rule={} granted=false (explicit deny)",
-                            method, path, rule.name());
+                    log.debug("RBAC decision: method={} path={} principal={} rule={} granted=false reason=explicit-deny",
+                            method, path, principal(authentication), rule.name());
                 }
                 return new AuthorizationDecision(false);
             }
@@ -80,16 +81,16 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
 
         if (matchedAnyRule) {
             if (log.isDebugEnabled()) {
-                log.debug("RBAC decision: method={} path={} rule=<matched> granted={}",
-                        method, path, grantedByAllowRule);
+                log.debug("RBAC decision: method={} path={} principal={} roles={} rule=<matched> granted={}",
+                        method, path, principal(authentication), extractRolesSafe(authentication), grantedByAllowRule);
             }
             return new AuthorizationDecision(grantedByAllowRule);
         }
 
         boolean granted = defaultDecision == RbacProperties.Decision.ALLOW;
         if (log.isDebugEnabled()) {
-            log.debug("RBAC decision: method={} path={} rule=<default> granted={}",
-                    method, path, granted);
+            log.debug("RBAC decision: method={} path={} principal={} rule=<default> granted={}",
+                    method, path, principal(authentication), granted);
         }
         return new AuthorizationDecision(granted);
     }
@@ -127,6 +128,20 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 .map(authority -> authority.substring(ROLE_PREFIX.length()))
                 .map(role -> role.toUpperCase(Locale.ROOT))
                 .collect(Collectors.toSet());
+    }
+
+    private Set<String> extractRolesSafe(Authentication authentication) {
+        if (isAnonymous(authentication)) {
+            return Set.of();
+        }
+        return extractRoles(authentication);
+    }
+
+    private String principal(Authentication authentication) {
+        if (isAnonymous(authentication)) {
+            return "anonymous";
+        }
+        return Objects.toString(authentication.getPrincipal(), "unknown");
     }
 
     private CompiledRule compileRule(RbacProperties.Rule rule) {

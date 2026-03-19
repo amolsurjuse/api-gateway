@@ -53,6 +53,86 @@ app:
       - "https://driver-portal-*.electrahub.com:*"
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
+  rbac:
+    role-hierarchy: |
+      ROLE_SYSTEM_ADMIN > ROLE_USER
+    default-decision: DENY
+    rules:
+      - name: cors-preflight
+        methods: [ "OPTIONS" ]
+        path-pattern: "/**"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: actuator-health
+        methods: [ "GET" ]
+        path-pattern: "/actuator/health/**"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: openapi-docs
+        methods: [ "GET" ]
+        path-pattern: "/v3/api-docs/**"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: swagger-ui
+        methods: [ "GET" ]
+        path-pattern: "/swagger-ui/**"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: swagger-ui-index
+        methods: [ "GET" ]
+        path-pattern: "/swagger-ui.html"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: auth-login
+        methods: [ "POST" ]
+        path-pattern: "/auth/api/auth/login"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: auth-register
+        methods: [ "POST" ]
+        path-pattern: "/auth/api/auth/register"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: auth-refresh
+        methods: [ "POST" ]
+        path-pattern: "/auth/api/auth/refresh"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: user-admin
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: auth-user
+        methods: [ "*" ]
+        path-pattern: "/auth/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: user-service
+        methods: [ "*" ]
+        path-pattern: "/user/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: subscription-service
+        methods: [ "*" ]
+        path-pattern: "/subscription/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: payment-service
+        methods: [ "*" ]
+        path-pattern: "/payment/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: charger-management-service
+        methods: [ "*" ]
+        path-pattern: "/charger-management/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: web-socket-connector
+        methods: [ "*" ]
+        path-pattern: "/ws/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
   redis:
     denylist-prefix: ${APP_REDIS_DENYLIST_PREFIX:deny:jwt:}
     token-version-prefix: ${APP_REDIS_TOKEN_VERSION_PREFIX:tv:}

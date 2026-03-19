@@ -1,16 +1,14 @@
 package com.electrahub.gateway.config;
 
+import com.electrahub.gateway.security.ApiPolicyAuthorizationManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.expression.DefaultHttpSecurityExpressionHandler;
-import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -23,11 +21,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CorsProperties corsProperties;
-    private final RoleHierarchy roleHierarchy;
 
-    public SecurityConfig(CorsProperties corsProperties, RoleHierarchy roleHierarchy) {
+    public SecurityConfig(CorsProperties corsProperties) {
         this.corsProperties = corsProperties;
-        this.roleHierarchy = roleHierarchy;
     }
 
     @Bean
@@ -52,44 +48,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthFilter jwtAuthFilter,
+            ApiPolicyAuthorizationManager apiPolicyAuthorizationManager
+    ) throws Exception {
 
         http
                 .cors(cors -> {})
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints — no authentication required
-                        .requestMatchers(
-                                "/auth/**",
-                                "/actuator/health/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-
-                        // Admin endpoints — require SYSTEM_ADMIN (role hierarchy grants USER implicitly)
-                        .requestMatchers("/user/api/v1/admin/**")
-                        .access(hierarchyAwareManager("hasRole('SYSTEM_ADMIN')"))
-
-                        // All other routes — require USER (SYSTEM_ADMIN inherits this)
-                        .anyRequest()
-                        .access(hierarchyAwareManager("hasRole('USER')"))
+                        .anyRequest().access(apiPolicyAuthorizationManager)
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    /**
-     * Creates a WebExpressionAuthorizationManager that is aware of the role hierarchy,
-     * so that SYSTEM_ADMIN automatically satisfies hasRole('USER').
-     */
-    private WebExpressionAuthorizationManager hierarchyAwareManager(String expression) {
-        var manager = new WebExpressionAuthorizationManager(expression);
-        var handler = new DefaultHttpSecurityExpressionHandler();
-        handler.setRoleHierarchy(roleHierarchy);
-        manager.setExpressionHandler(handler);
-        return manager;
     }
 }

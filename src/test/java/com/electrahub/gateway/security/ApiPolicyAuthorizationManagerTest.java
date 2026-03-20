@@ -3,8 +3,6 @@ package com.electrahub.gateway.security;
 import com.electrahub.gateway.config.RbacProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationResult;
@@ -21,9 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiPolicyAuthorizationManagerTest {
 
-    private static final RoleHierarchy ROLE_HIERARCHY =
-            RoleHierarchyImpl.fromHierarchy("ROLE_SYSTEM_ADMIN > ROLE_USER");
-
     @Test
     void allowsAnonymousForPublicRule() {
         var properties = new RbacProperties();
@@ -31,7 +26,7 @@ class ApiPolicyAuthorizationManagerTest {
                 rule("public-health", List.of("GET"), "/actuator/health/**", true, List.of())
         ));
 
-        var manager = new ApiPolicyAuthorizationManager(properties, ROLE_HIERARCHY);
+        var manager = manager(properties);
         var decision = authorize(manager, "GET", "/actuator/health/readiness", () -> null);
 
         assertTrue(decision.isGranted());
@@ -45,7 +40,7 @@ class ApiPolicyAuthorizationManagerTest {
                 rule("known", List.of("GET"), "/known/**", false, List.of("USER"))
         ));
 
-        var manager = new ApiPolicyAuthorizationManager(properties, ROLE_HIERARCHY);
+        var manager = manager(properties);
         var decision = authorize(manager, "GET", "/unknown/path", () -> authenticationWithRoles("USER"));
 
         assertFalse(decision.isGranted());
@@ -58,7 +53,7 @@ class ApiPolicyAuthorizationManagerTest {
                 rule("user-protected", List.of("*"), "/user/**", false, List.of("USER"))
         ));
 
-        var manager = new ApiPolicyAuthorizationManager(properties, ROLE_HIERARCHY);
+        var manager = manager(properties);
         var decision = authorize(manager, "GET", "/user/api/v1/profile", () -> authenticationWithRoles("SYSTEM_ADMIN"));
 
         assertTrue(decision.isGranted());
@@ -72,7 +67,7 @@ class ApiPolicyAuthorizationManagerTest {
                 denyRule("user-sensitive-deny", List.of("*"), "/user/api/v1/admin/**")
         ));
 
-        var manager = new ApiPolicyAuthorizationManager(properties, ROLE_HIERARCHY);
+        var manager = manager(properties);
         var decision = authorize(manager, "GET", "/user/api/v1/admin/users", () -> authenticationWithRoles("SYSTEM_ADMIN"));
 
         assertFalse(decision.isGranted());
@@ -124,5 +119,27 @@ class ApiPolicyAuthorizationManagerTest {
         rule.setAllowAnonymous(false);
         rule.setRequiredRoles(List.of());
         return rule;
+    }
+
+    private static ApiPolicyAuthorizationManager manager(RbacProperties properties) {
+        return new ApiPolicyAuthorizationManager(new FixedSnapshotProvider(RbacPolicySnapshot.fromProperties(properties)));
+    }
+
+    private static final class FixedSnapshotProvider implements RbacPolicySnapshotProvider {
+        private final RbacPolicySnapshot snapshot;
+
+        private FixedSnapshotProvider(RbacPolicySnapshot snapshot) {
+            this.snapshot = snapshot;
+        }
+
+        @Override
+        public RbacPolicySnapshot currentPolicy() {
+            return snapshot;
+        }
+
+        @Override
+        public void invalidate() {
+            // no-op for tests
+        }
     }
 }

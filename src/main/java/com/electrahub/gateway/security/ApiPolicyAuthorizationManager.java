@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
@@ -29,19 +30,12 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
     private static final Logger log = LoggerFactory.getLogger(ApiPolicyAuthorizationManager.class);
     private static final String ROLE_PREFIX = "ROLE_";
 
-    private final RoleHierarchy roleHierarchy;
+    private final RbacPolicySnapshotProvider policySnapshotProvider;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
-    private final RbacProperties.Decision defaultDecision;
-    private final List<CompiledRule> rules;
+    private volatile CompiledPolicy compiledPolicy;
 
-    public ApiPolicyAuthorizationManager(RbacProperties rbacProperties, RoleHierarchy roleHierarchy) {
-        this.roleHierarchy = roleHierarchy;
-        this.defaultDecision = rbacProperties.getDefaultDecision() == null
-                ? RbacProperties.Decision.DENY
-                : rbacProperties.getDefaultDecision();
-        this.rules = rbacProperties.getRules().stream()
-                .map(this::compileRule)
-                .toList();
+    public ApiPolicyAuthorizationManager(RbacPolicySnapshotProvider policySnapshotProvider) {
+        this.policySnapshotProvider = policySnapshotProvider;
     }
 
     @Override
@@ -49,6 +43,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
             Supplier<? extends Authentication> authenticationSupplier,
             RequestAuthorizationContext requestAuthorizationContext
     ) {
+        CompiledPolicy currentPolicy = resolveCompiledPolicy();
         HttpServletRequest request = requestAuthorizationContext.getRequest();
         String method = request.getMethod().toUpperCase(Locale.ROOT);
         String path = request.getRequestURI();
@@ -56,7 +51,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         boolean matchedAnyRule = false;
         boolean grantedByAllowRule = false;
 
-        for (CompiledRule rule : rules) {
+        for (CompiledRule rule : currentPolicy.rules()) {
             if (!rule.matches(method, path, antPathMatcher)) {
                 continue;
             }
@@ -74,7 +69,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 authentication = authenticationSupplier.get();
             }
 
-            if (evaluateAllowRule(rule, authentication)) {
+            if (evaluateAllowRule(rule, authentication, currentPolicy.roleHierarchy())) {
                 grantedByAllowRule = true;
             }
         }
@@ -87,7 +82,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
             return new AuthorizationDecision(grantedByAllowRule);
         }
 
-        boolean granted = defaultDecision == RbacProperties.Decision.ALLOW;
+        boolean granted = currentPolicy.defaultDecision() == RbacProperties.Decision.ALLOW;
         if (log.isDebugEnabled()) {
             log.debug("RBAC decision: method={} path={} principal={} rule=<default> granted={}",
                     method, path, principal(authentication), granted);
@@ -95,7 +90,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return new AuthorizationDecision(granted);
     }
 
-    private boolean evaluateAllowRule(CompiledRule rule, Authentication authentication) {
+    private boolean evaluateAllowRule(CompiledRule rule, Authentication authentication, RoleHierarchy roleHierarchy) {
         if (rule.allowAnonymous()) {
             return true;
         }
@@ -108,7 +103,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
             return true;
         }
 
-        Set<String> effectiveRoles = extractRoles(authentication);
+        Set<String> effectiveRoles = extractRoles(authentication, roleHierarchy);
         return rule.requiredRoles().stream().anyMatch(effectiveRoles::contains);
     }
 
@@ -118,7 +113,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 || authentication instanceof AnonymousAuthenticationToken;
     }
 
-    private Set<String> extractRoles(Authentication authentication) {
+    private Set<String> extractRoles(Authentication authentication, RoleHierarchy roleHierarchy) {
         Collection<? extends GrantedAuthority> grantedAuthorities =
                 roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
 
@@ -134,7 +129,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         if (isAnonymous(authentication)) {
             return Set.of();
         }
-        return extractRoles(authentication);
+        return extractRoles(authentication, resolveCompiledPolicy().roleHierarchy());
     }
 
     private String principal(Authentication authentication) {
@@ -144,21 +139,56 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return Objects.toString(authentication.getPrincipal(), "unknown");
     }
 
-    private CompiledRule compileRule(RbacProperties.Rule rule) {
-        String compiledName = rule.getName() == null ? "<unnamed>" : rule.getName().trim();
-        String pathPattern = normalizePathPattern(rule.getPathPattern());
-        Set<String> methods = normalizeMethods(rule.getMethods());
-        Set<String> requiredRoles = normalizeRoles(rule.getRequiredRoles());
-        RbacProperties.Decision effect = rule.getEffect() == null
-                ? RbacProperties.Decision.ALLOW
-                : rule.getEffect();
+    private CompiledPolicy resolveCompiledPolicy() {
+        RbacPolicySnapshot snapshot = policySnapshotProvider.currentPolicy();
+        CompiledPolicy current = compiledPolicy;
+        if (current != null && current.version() == snapshot.version()) {
+            return current;
+        }
+
+        synchronized (this) {
+            current = compiledPolicy;
+            if (current != null && current.version() == snapshot.version()) {
+                return current;
+            }
+
+            RoleHierarchy hierarchy;
+            try {
+                hierarchy = RoleHierarchyImpl.fromHierarchy(snapshot.roleHierarchy());
+            } catch (Exception ex) {
+                log.warn("Invalid RBAC role hierarchy received; defaulting to ROLE_SYSTEM_ADMIN > ROLE_USER. cause={}", ex.getMessage());
+                hierarchy = RoleHierarchyImpl.fromHierarchy("ROLE_SYSTEM_ADMIN > ROLE_USER");
+            }
+
+            RbacProperties.Decision defaultDecision = snapshot.defaultDecision() == null
+                    ? RbacProperties.Decision.DENY
+                    : snapshot.defaultDecision();
+
+            List<CompiledRule> compiledRules = snapshot.rules() == null
+                    ? List.of()
+                    : snapshot.rules().stream()
+                    .map(this::compileRule)
+                    .toList();
+
+            CompiledPolicy resolved = new CompiledPolicy(snapshot.version(), hierarchy, defaultDecision, compiledRules);
+            compiledPolicy = resolved;
+            return resolved;
+        }
+    }
+
+    private CompiledRule compileRule(RbacPolicySnapshot.RbacRuleSnapshot rule) {
+        String compiledName = rule.name() == null ? "<unnamed>" : rule.name().trim();
+        String pathPattern = normalizePathPattern(rule.pathPattern());
+        Set<String> methods = normalizeMethods(rule.methods());
+        Set<String> requiredRoles = normalizeRoles(rule.requiredRoles());
+        RbacProperties.Decision effect = rule.effect() == null ? RbacProperties.Decision.ALLOW : rule.effect();
 
         return new CompiledRule(
                 compiledName,
                 pathPattern,
                 methods,
                 effect,
-                rule.isAllowAnonymous(),
+                rule.allowAnonymous(),
                 requiredRoles
         );
     }
@@ -208,5 +238,13 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
             boolean methodMatches = methods.contains("*") || methods.contains(requestMethod);
             return methodMatches && antPathMatcher.match(pathPattern, requestPath);
         }
+    }
+
+    private record CompiledPolicy(
+            long version,
+            RoleHierarchy roleHierarchy,
+            RbacProperties.Decision defaultDecision,
+            List<CompiledRule> rules
+    ) {
     }
 }

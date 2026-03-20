@@ -59,6 +59,11 @@ app:
     role-hierarchy: |
       ROLE_SYSTEM_ADMIN > ROLE_USER
     default-decision: DENY
+    internal-api-key: ${APP_RBAC_INTERNAL_API_KEY:dev-rbac-internal-key}
+    remote-policy:
+      enabled: ${APP_RBAC_REMOTE_POLICY_ENABLED:true}
+      source-url: ${APP_RBAC_REMOTE_POLICY_SOURCE_URL:http://user-service:8082/api/internal/rbac/policy}
+      refresh-interval: ${APP_RBAC_REMOTE_POLICY_REFRESH_INTERVAL:30s}
     rules:
       - name: cors-preflight
         methods: [ "OPTIONS" ]

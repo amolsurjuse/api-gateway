@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.net.URI;
 import java.util.Enumeration;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -107,8 +108,11 @@ public class GatewayProxyController {
 
                 HttpHeaders responseHeaders = new HttpHeaders();
                 res.getHeaders().forEach((name, values) -> {
-                    String lowerName = name.toLowerCase();
-                    if (!HOP_BY_HOP_HEADERS.contains(lowerName) && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
+                    String lowerName = name.toLowerCase(Locale.ROOT);
+                    boolean isPseudoHeader = name.startsWith(":");
+                    if (!isPseudoHeader
+                            && !HOP_BY_HOP_HEADERS.contains(lowerName)
+                            && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
                         responseHeaders.addAll(name, values);
                     }
                 });

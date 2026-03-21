@@ -150,6 +150,41 @@ app:
         path-pattern: "/charger/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: pricing-admin
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/plans/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-search
+        methods: [ "POST", "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/search/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: pricing-calculate
+        methods: [ "POST" ]
+        path-pattern: "/pricing/api/v1/pricing/calculate/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: pricing-history
+        methods: [ "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/history/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-signals
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/signals/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-ocpi
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/ocpi/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-health
+        methods: [ "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/health"
+        effect: ALLOW
+        allow-anonymous: true
       - name: web-socket-connector
         methods: [ "*" ]
         path-pattern: "/ws/**"
@@ -168,3 +203,4 @@ gateway:
     charger-management: ${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}
     charger: ${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}
+    pricing: ${GATEWAY_ROUTE_PRICING:http://pricing-service:8092}

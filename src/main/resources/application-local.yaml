@@ -31,3 +31,4 @@ gateway:
     charger-management: http://127.0.0.1:8086
     charger: http://127.0.0.1:8086
     ws-connector: http://127.0.0.1:8091
+    pricing: http://127.0.0.1:8092

@@ -105,6 +105,11 @@ app:
         path-pattern: "/auth/api/auth/refresh"
         effect: ALLOW
         allow-anonymous: true
+      - name: auth-countries
+        methods: [ "GET" ]
+        path-pattern: "/auth/api/countries/**"
+        effect: ALLOW
+        allow-anonymous: true
       - name: user-admin
         methods: [ "*" ]
         path-pattern: "/user/api/v1/admin/**"

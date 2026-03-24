@@ -24,7 +24,16 @@ public class ObservabilityAspect {
 
     private final MeterRegistry meterRegistry;
 
+    /**
+     * Executes observability aspect for `ObservabilityAspect`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.observability`.
+     * @param meterRegistry input consumed by ObservabilityAspect.
+     */
     public ObservabilityAspect(MeterRegistry meterRegistry) {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering ObservabilityAspect#ObservabilityAspect");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering ObservabilityAspect#ObservabilityAspect with debug context");
         this.meterRegistry = meterRegistry;
     }
 
@@ -35,6 +44,14 @@ public class ObservabilityAspect {
             "within(@org.springframework.stereotype.Repository *) || " +
             "within(@org.springframework.stereotype.Component *)) && " +
             "!within(com.electrahub..observability..*)")
+    /**
+     * Executes observe for `ObservabilityAspect`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.observability`.
+     * @param joinPoint input consumed by observe.
+     * @return result produced by observe.
+     */
     public Object observe(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String className = signature.getDeclaringType().getSimpleName();
@@ -94,6 +111,14 @@ public class ObservabilityAspect {
         }
     }
 
+    /**
+     * Executes format args for `ObservabilityAspect`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.observability`.
+     * @param args input consumed by formatArgs.
+     * @return result produced by formatArgs.
+     */
     private String formatArgs(Object[] args) {
         if (args == null || args.length == 0) {
             return "[]";
@@ -103,6 +128,14 @@ public class ObservabilityAspect {
                 .collect(Collectors.joining(", ", "[", "]"));
     }
 
+    /**
+     * Executes abbreviate for `ObservabilityAspect`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.observability`.
+     * @param value input consumed by abbreviate.
+     * @return result produced by abbreviate.
+     */
     private String abbreviate(Object value) {
         if (value == null) {
             return "null";

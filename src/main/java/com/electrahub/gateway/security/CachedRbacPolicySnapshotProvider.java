@@ -26,34 +26,76 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
     private final AtomicReference<PolicyState> state;
     private volatile boolean invalidated = true;
 
+    /**
+     * Executes cached rbac policy snapshot provider for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param rbacProperties input consumed by CachedRbacPolicySnapshotProvider.
+     * @param restClientBuilder input consumed by CachedRbacPolicySnapshotProvider.
+     */
     public CachedRbacPolicySnapshotProvider(RbacProperties rbacProperties, RestClient.Builder restClientBuilder) {
+        log.info("CODEx_ENTRY_LOG: Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider");
+        log.debug("CODEx_ENTRY_LOG: Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider with debug context");
         this.rbacProperties = rbacProperties;
         this.restClient = restClientBuilder.build();
         this.fallbackSnapshot = RbacPolicySnapshot.fromProperties(rbacProperties);
         this.state = new AtomicReference<>(new PolicyState(fallbackSnapshot, Instant.EPOCH));
     }
 
+    /**
+     * Creates initial fetch for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @PostConstruct
     void initialFetch() {
         refreshIfNeeded(true);
     }
 
+    /**
+     * Executes current policy for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @return result produced by currentPolicy.
+     */
     @Override
     public RbacPolicySnapshot currentPolicy() {
         refreshIfNeeded(true);
         return state.get().snapshot();
     }
 
+    /**
+     * Executes invalidate for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Override
     public void invalidate() {
         invalidated = true;
     }
 
+    /**
+     * Executes scheduled refresh for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Scheduled(fixedDelayString = "30000")
     void scheduledRefresh() {
         refreshIfNeeded(false);
     }
 
+    /**
+     * Updates refresh if needed for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param forceOnDemand input consumed by refreshIfNeeded.
+     */
     private void refreshIfNeeded(boolean forceOnDemand) {
         if (!rbacProperties.getRemotePolicy().isEnabled()) {
             return;
@@ -94,6 +136,13 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
         }
     }
 
+    /**
+     * Executes should refresh for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @return result produced by shouldRefresh.
+     */
     private boolean shouldRefresh() {
         if (invalidated) {
             return true;
@@ -108,6 +157,14 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
         return Instant.now().isAfter(nextRefreshAt);
     }
 
+    /**
+     * Executes to snapshot for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param response input consumed by toSnapshot.
+     * @return result produced by toSnapshot.
+     */
     private RbacPolicySnapshot toSnapshot(RemoteRbacPolicyResponse response) {
         String roleHierarchy = normalizeText(response.roleHierarchy());
         if (roleHierarchy.isBlank()) {
@@ -127,6 +184,14 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
         );
     }
 
+    /**
+     * Executes to rule snapshot for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param rule input consumed by toRuleSnapshot.
+     * @return result produced by toRuleSnapshot.
+     */
     private RbacPolicySnapshot.RbacRuleSnapshot toRuleSnapshot(RemoteRbacRuleResponse rule) {
         if (rule == null) {
             return new RbacPolicySnapshot.RbacRuleSnapshot(
@@ -164,6 +229,15 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
         );
     }
 
+    /**
+     * Executes parse decision for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param value input consumed by parseDecision.
+     * @param fallback input consumed by parseDecision.
+     * @return result produced by parseDecision.
+     */
     private RbacProperties.Decision parseDecision(String value, RbacProperties.Decision fallback) {
         String normalized = normalizeText(value).toUpperCase(Locale.ROOT);
         if ("ALLOW".equals(normalized)) {
@@ -175,6 +249,14 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
         return fallback;
     }
 
+    /**
+     * Executes normalize text for `CachedRbacPolicySnapshotProvider`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param value input consumed by normalizeText.
+     * @return result produced by normalizeText.
+     */
     private String normalizeText(String value) {
         return value == null ? "" : value.trim();
     }

@@ -1,5 +1,7 @@
 package com.electrahub.gateway.security;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import com.electrahub.gateway.config.RbacProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,11 +14,23 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/internal/rbac/cache")
 public class RbacCacheController {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RbacCacheController.class);
+
 
     private final RbacProperties rbacProperties;
     private final RbacPolicySnapshotProvider rbacPolicySnapshotProvider;
 
+    /**
+     * Executes rbac cache controller for `RbacCacheController`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param rbacProperties input consumed by RbacCacheController.
+     * @param rbacPolicySnapshotProvider input consumed by RbacCacheController.
+     */
     public RbacCacheController(RbacProperties rbacProperties, RbacPolicySnapshotProvider rbacPolicySnapshotProvider) {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering RbacCacheController#RbacCacheController");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering RbacCacheController#RbacCacheController with debug context");
         this.rbacProperties = rbacProperties;
         this.rbacPolicySnapshotProvider = rbacPolicySnapshotProvider;
     }

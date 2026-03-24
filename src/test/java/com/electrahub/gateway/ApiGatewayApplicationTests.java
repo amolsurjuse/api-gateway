@@ -1,5 +1,7 @@
 package com.electrahub.gateway;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -17,8 +19,18 @@ import org.springframework.test.context.TestPropertySource;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
 })
 class ApiGatewayApplicationTests {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayApplicationTests.class);
 
+
+    /**
+     * Executes context loads for `ApiGatewayApplicationTests`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway`.
+     */
     @Test
     void contextLoads() {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering ApiGatewayApplicationTests#contextLoads");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering ApiGatewayApplicationTests#contextLoads with debug context");
     }
 }

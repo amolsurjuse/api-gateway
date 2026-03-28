@@ -10,6 +10,14 @@ public record RbacPolicySnapshot(
         RbacProperties.Decision defaultDecision,
         List<RbacRuleSnapshot> rules
 ) {
+    /**
+     * Executes from properties for `RbacPolicySnapshot`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param properties input consumed by fromProperties.
+     * @return result produced by fromProperties.
+     */
     public static RbacPolicySnapshot fromProperties(RbacProperties properties) {
         List<RbacRuleSnapshot> ruleSnapshots = properties.getRules().stream()
                 .map(rule -> new RbacRuleSnapshot(

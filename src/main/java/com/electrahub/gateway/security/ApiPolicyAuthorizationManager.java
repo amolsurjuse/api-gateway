@@ -34,7 +34,16 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private volatile CompiledPolicy compiledPolicy;
 
+    /**
+     * Executes api policy authorization manager for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param policySnapshotProvider input consumed by ApiPolicyAuthorizationManager.
+     */
     public ApiPolicyAuthorizationManager(RbacPolicySnapshotProvider policySnapshotProvider) {
+        log.info("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager");
+        log.debug("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager with debug context");
         this.policySnapshotProvider = policySnapshotProvider;
     }
 
@@ -90,6 +99,16 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return new AuthorizationDecision(granted);
     }
 
+    /**
+     * Executes evaluate allow rule for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param rule input consumed by evaluateAllowRule.
+     * @param authentication input consumed by evaluateAllowRule.
+     * @param roleHierarchy input consumed by evaluateAllowRule.
+     * @return result produced by evaluateAllowRule.
+     */
     private boolean evaluateAllowRule(CompiledRule rule, Authentication authentication, RoleHierarchy roleHierarchy) {
         if (rule.allowAnonymous()) {
             return true;
@@ -107,12 +126,29 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return rule.requiredRoles().stream().anyMatch(effectiveRoles::contains);
     }
 
+    /**
+     * Executes is anonymous for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param authentication input consumed by isAnonymous.
+     * @return result produced by isAnonymous.
+     */
     private boolean isAnonymous(Authentication authentication) {
         return authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
     }
 
+    /**
+     * Executes extract roles for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param authentication input consumed by extractRoles.
+     * @param roleHierarchy input consumed by extractRoles.
+     * @return result produced by extractRoles.
+     */
     private Set<String> extractRoles(Authentication authentication, RoleHierarchy roleHierarchy) {
         Collection<? extends GrantedAuthority> grantedAuthorities =
                 roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
@@ -125,6 +161,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Executes extract roles safe for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param authentication input consumed by extractRolesSafe.
+     * @return result produced by extractRolesSafe.
+     */
     private Set<String> extractRolesSafe(Authentication authentication) {
         if (isAnonymous(authentication)) {
             return Set.of();
@@ -132,6 +176,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return extractRoles(authentication, resolveCompiledPolicy().roleHierarchy());
     }
 
+    /**
+     * Executes principal for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param authentication input consumed by principal.
+     * @return result produced by principal.
+     */
     private String principal(Authentication authentication) {
         if (isAnonymous(authentication)) {
             return "anonymous";
@@ -139,6 +191,13 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return Objects.toString(authentication.getPrincipal(), "unknown");
     }
 
+    /**
+     * Executes resolve compiled policy for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @return result produced by resolveCompiledPolicy.
+     */
     private CompiledPolicy resolveCompiledPolicy() {
         RbacPolicySnapshot snapshot = policySnapshotProvider.currentPolicy();
         CompiledPolicy current = compiledPolicy;
@@ -176,6 +235,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         }
     }
 
+    /**
+     * Executes compile rule for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param rule input consumed by compileRule.
+     * @return result produced by compileRule.
+     */
     private CompiledRule compileRule(RbacPolicySnapshot.RbacRuleSnapshot rule) {
         String compiledName = rule.name() == null ? "<unnamed>" : rule.name().trim();
         String pathPattern = normalizePathPattern(rule.pathPattern());
@@ -193,6 +260,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         );
     }
 
+    /**
+     * Executes normalize path pattern for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param pathPattern input consumed by normalizePathPattern.
+     * @return result produced by normalizePathPattern.
+     */
     private String normalizePathPattern(String pathPattern) {
         if (pathPattern == null || pathPattern.isBlank()) {
             return "/**";
@@ -200,6 +275,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return pathPattern.trim();
     }
 
+    /**
+     * Executes normalize methods for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param methods input consumed by normalizeMethods.
+     * @return result produced by normalizeMethods.
+     */
     private Set<String> normalizeMethods(List<String> methods) {
         if (methods == null || methods.isEmpty()) {
             return Set.of("*");
@@ -215,6 +298,14 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return normalized;
     }
 
+    /**
+     * Executes normalize roles for `ApiPolicyAuthorizationManager`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param requiredRoles input consumed by normalizeRoles.
+     * @return result produced by normalizeRoles.
+     */
     private Set<String> normalizeRoles(List<String> requiredRoles) {
         if (requiredRoles == null || requiredRoles.isEmpty()) {
             return Set.of();

@@ -28,7 +28,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: never
@@ -56,6 +56,7 @@ app:
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
   rbac:
+    transport: ${APP_RBAC_TRANSPORT:rest}
     role-hierarchy: |
       ROLE_SYSTEM_ADMIN > ROLE_USER
     default-decision: DENY
@@ -150,6 +151,41 @@ app:
         path-pattern: "/charger/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: pricing-admin
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/plans/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-search
+        methods: [ "POST", "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/search/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: pricing-calculate
+        methods: [ "POST" ]
+        path-pattern: "/pricing/api/v1/pricing/calculate/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: pricing-history
+        methods: [ "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/history/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-signals
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/signals/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-ocpi
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/pricing/ocpi/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-health
+        methods: [ "GET" ]
+        path-pattern: "/pricing/api/v1/pricing/health"
+        effect: ALLOW
+        allow-anonymous: true
       - name: web-socket-connector
         methods: [ "*" ]
         path-pattern: "/ws/**"
@@ -158,6 +194,20 @@ app:
   redis:
     denylist-prefix: ${APP_REDIS_DENYLIST_PREFIX:deny:jwt:}
     token-version-prefix: ${APP_REDIS_TOKEN_VERSION_PREFIX:tv:}
+  grpc:
+    forwarders:
+      auth:
+        enabled: ${APP_GRPC_FORWARDERS_AUTH_ENABLED:false}
+      user:
+        enabled: ${APP_GRPC_FORWARDERS_USER_ENABLED:false}
+      payment:
+        enabled: ${APP_GRPC_FORWARDERS_PAYMENT_ENABLED:false}
+      subscription:
+        enabled: ${APP_GRPC_FORWARDERS_SUBSCRIPTION_ENABLED:false}
+      charger:
+        enabled: ${APP_GRPC_FORWARDERS_CHARGER_ENABLED:false}
+      pricing:
+        enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:false}
 
 gateway:
   routes:
@@ -168,3 +218,25 @@ gateway:
     charger-management: ${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}
     charger: ${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}
+    pricing: ${GATEWAY_ROUTE_PRICING:http://pricing-service:8092}
+
+grpc:
+  client:
+    auth-service:
+      address: ${GRPC_CLIENT_AUTH_SERVICE_ADDRESS:dns:///auth-service:9080}
+      negotiation-type: plaintext
+    user-service:
+      address: ${GRPC_CLIENT_USER_SERVICE_ADDRESS:dns:///user-service:9082}
+      negotiation-type: plaintext
+    payment-service:
+      address: ${GRPC_CLIENT_PAYMENT_SERVICE_ADDRESS:dns:///payment-service:9083}
+      negotiation-type: plaintext
+    subscription-service:
+      address: ${GRPC_CLIENT_SUBSCRIPTION_SERVICE_ADDRESS:dns:///subscription-service:9086}
+      negotiation-type: plaintext
+    charger-management-service:
+      address: ${GRPC_CLIENT_CHARGER_SERVICE_ADDRESS:dns:///charger-management-service:9086}
+      negotiation-type: plaintext
+    pricing-service:
+      address: ${GRPC_CLIENT_PRICING_SERVICE_ADDRESS:dns:///pricing-service:9092}
+      negotiation-type: plaintext

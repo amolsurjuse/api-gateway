@@ -1,5 +1,7 @@
 package com.electrahub.gateway.security;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +13,8 @@ import java.util.*;
 
 @Service
 public class JwtService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtService.class);
+
 
     private final Key signingKey;
     private final String issuer;
@@ -25,7 +29,17 @@ public class JwtService {
 
     public record ParsedToken(String subjectEmail, String jti, String uid, long tv, Date exp, List<String> roles) {}
 
+    /**
+     * Executes parse and validate for `JwtService`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param token input consumed by parseAndValidate.
+     * @return result produced by parseAndValidate.
+     */
     public ParsedToken parseAndValidate(String token) {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering JwtService#parseAndValidate");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering JwtService#parseAndValidate with debug context");
         Jws<Claims> jws = Jwts.parser()
                 .verifyWith((javax.crypto.SecretKey) signingKey)
                 .build()
@@ -58,6 +72,14 @@ public class JwtService {
         );
     }
 
+    /**
+     * Executes is not expired for `JwtService`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param exp input consumed by isNotExpired.
+     * @return result produced by isNotExpired.
+     */
     public boolean isNotExpired(Date exp) {
         return exp != null && exp.after(new Date());
     }

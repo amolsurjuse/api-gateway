@@ -102,7 +102,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * Executes is denied for `JwtAuthFilter`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.config`.
+     * @param jti input consumed by isDenied.
+     * @param path input consumed by isDenied.
+     * @return result produced by isDenied.
+     */
     private boolean isDenied(String jti, String path) {
+        log.info("CODEx_ENTRY_LOG: Entering JwtAuthFilter#isDenied");
+        log.debug("CODEx_ENTRY_LOG: Entering JwtAuthFilter#isDenied with debug context");
         try {
             return denylistService.isDenied(jti);
         } catch (RuntimeException ex) {
@@ -114,6 +125,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * Executes resolve current token version for `JwtAuthFilter`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.config`.
+     * @param userId input consumed by resolveCurrentTokenVersion.
+     * @param tokenVersionFromJwt input consumed by resolveCurrentTokenVersion.
+     * @param path input consumed by resolveCurrentTokenVersion.
+     * @return result produced by resolveCurrentTokenVersion.
+     */
     private long resolveCurrentTokenVersion(UUID userId, long tokenVersionFromJwt, String path) {
         try {
             return tokenVersionService.getVersion(userId);

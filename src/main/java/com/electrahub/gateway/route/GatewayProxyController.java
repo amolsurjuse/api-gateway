@@ -54,13 +54,31 @@ public class GatewayProxyController {
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
 
+    /**
+     * Executes gateway proxy controller for `GatewayProxyController`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.route`.
+     * @param routeRegistry input consumed by GatewayProxyController.
+     * @param restClientBuilder input consumed by GatewayProxyController.
+     */
     public GatewayProxyController(RouteRegistry routeRegistry, RestClient.Builder restClientBuilder) {
+        log.info("CODEx_ENTRY_LOG: Entering GatewayProxyController#GatewayProxyController");
+        log.debug("CODEx_ENTRY_LOG: Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
     }
 
     @RequestMapping("/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request,
+                                        /**
+                                         * Executes request body for `GatewayProxyController`.
+                                         *
+                                         * <p>Detailed behavior: follows the current implementation path and
+                                         * enforces component-specific rules in `com.electrahub.gateway.route`.
+                                         * @param body input consumed by RequestBody.
+                                         * @return result produced by RequestBody.
+                                         */
                                         @RequestBody(required = false) byte[] body) {
 
         String path = request.getRequestURI();

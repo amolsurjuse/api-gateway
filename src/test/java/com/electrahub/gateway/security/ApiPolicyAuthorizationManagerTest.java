@@ -1,5 +1,7 @@
 package com.electrahub.gateway.security;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import com.electrahub.gateway.config.RbacProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,9 +20,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiPolicyAuthorizationManagerTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiPolicyAuthorizationManagerTest.class);
 
+
+    /**
+     * Executes allows anonymous for public rule for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Test
     void allowsAnonymousForPublicRule() {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule with debug context");
         var properties = new RbacProperties();
         properties.setRules(List.of(
                 rule("public-health", List.of("GET"), "/actuator/health/**", true, List.of())
@@ -32,6 +44,12 @@ class ApiPolicyAuthorizationManagerTest {
         assertTrue(decision.isGranted());
     }
 
+    /**
+     * Executes denies when no rule matches and default is deny for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Test
     void deniesWhenNoRuleMatchesAndDefaultIsDeny() {
         var properties = new RbacProperties();
@@ -46,6 +64,12 @@ class ApiPolicyAuthorizationManagerTest {
         assertFalse(decision.isGranted());
     }
 
+    /**
+     * Executes allows system admin through role hierarchy for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Test
     void allowsSystemAdminThroughRoleHierarchy() {
         var properties = new RbacProperties();
@@ -59,6 +83,12 @@ class ApiPolicyAuthorizationManagerTest {
         assertTrue(decision.isGranted());
     }
 
+    /**
+     * Executes explicit deny overrides allow for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     */
     @Test
     void explicitDenyOverridesAllow() {
         var properties = new RbacProperties();
@@ -85,6 +115,14 @@ class ApiPolicyAuthorizationManagerTest {
         return new AuthorizationDecision(result != null && result.isGranted());
     }
 
+    /**
+     * Executes authentication with roles for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param roles input consumed by authenticationWithRoles.
+     * @return result produced by authenticationWithRoles.
+     */
     private static Authentication authenticationWithRoles(String... roles) {
         var authorities = Arrays.stream(roles)
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
@@ -110,6 +148,16 @@ class ApiPolicyAuthorizationManagerTest {
         return rule;
     }
 
+    /**
+     * Executes deny rule for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param name input consumed by denyRule.
+     * @param methods input consumed by denyRule.
+     * @param pathPattern input consumed by denyRule.
+     * @return result produced by denyRule.
+     */
     private static RbacProperties.Rule denyRule(String name, List<String> methods, String pathPattern) {
         var rule = new RbacProperties.Rule();
         rule.setName(name);
@@ -121,6 +169,14 @@ class ApiPolicyAuthorizationManagerTest {
         return rule;
     }
 
+    /**
+     * Executes manager for `ApiPolicyAuthorizationManagerTest`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.security`.
+     * @param properties input consumed by manager.
+     * @return result produced by manager.
+     */
     private static ApiPolicyAuthorizationManager manager(RbacProperties properties) {
         return new ApiPolicyAuthorizationManager(new FixedSnapshotProvider(RbacPolicySnapshot.fromProperties(properties)));
     }

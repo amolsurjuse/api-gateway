@@ -1,5 +1,7 @@
 package com.electrahub.gateway.config;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import com.electrahub.gateway.security.ApiPolicyAuthorizationManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,13 +21,31 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SecurityConfig.class);
+
 
     private final CorsProperties corsProperties;
 
+    /**
+     * Executes security config for `SecurityConfig`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.config`.
+     * @param corsProperties input consumed by SecurityConfig.
+     */
     public SecurityConfig(CorsProperties corsProperties) {
+        LOGGER.info("CODEx_ENTRY_LOG: Entering SecurityConfig#SecurityConfig");
+        LOGGER.debug("CODEx_ENTRY_LOG: Entering SecurityConfig#SecurityConfig with debug context");
         this.corsProperties = corsProperties;
     }
 
+    /**
+     * Executes cors configuration source for `SecurityConfig`.
+     *
+     * <p>Detailed behavior: follows the current implementation path and
+     * enforces component-specific rules in `com.electrahub.gateway.config`.
+     * @return result produced by corsConfigurationSource.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

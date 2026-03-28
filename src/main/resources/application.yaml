@@ -111,6 +111,26 @@ app:
         path-pattern: "/auth/api/countries/**"
         effect: ALLOW
         allow-anonymous: true
+      - name: terms-current
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/terms/current"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: terms-accept
+        methods: [ "POST" ]
+        path-pattern: "/user/api/v1/terms/accept"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: terms-acceptance-status
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/terms/acceptance/status"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: terms-admin
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/admin/terms/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: user-admin
         methods: [ "*" ]
         path-pattern: "/user/api/v1/admin/**"
@@ -146,11 +166,21 @@ app:
         path-pattern: "/charger/api/v1/admin/**"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN" ]
+      - name: charger-admin-chargers-connectors-public
+        methods: [ "GET" ]
+        path-pattern: "/charger/api/v1/admin/chargers/connectors"
+        effect: ALLOW
+        allow-anonymous: true
       - name: charger-service
         methods: [ "*" ]
         path-pattern: "/charger/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: charger-graphql
+        methods: [ "POST", "GET" ]
+        path-pattern: "/charger/graphql"
+        effect: ALLOW
+        allow-anonymous: true
       - name: pricing-admin
         methods: [ "*" ]
         path-pattern: "/pricing/api/v1/pricing/plans/**"

@@ -56,7 +56,7 @@ app:
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
   rbac:
-    transport: ${APP_RBAC_TRANSPORT:rest}
+    transport: ${APP_RBAC_TRANSPORT:grpc}
     role-hierarchy: |
       ROLE_SYSTEM_ADMIN > ROLE_USER
     default-decision: DENY
@@ -197,17 +197,17 @@ app:
   grpc:
     forwarders:
       auth:
-        enabled: ${APP_GRPC_FORWARDERS_AUTH_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_AUTH_ENABLED:true}
       user:
-        enabled: ${APP_GRPC_FORWARDERS_USER_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_USER_ENABLED:true}
       payment:
-        enabled: ${APP_GRPC_FORWARDERS_PAYMENT_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_PAYMENT_ENABLED:true}
       subscription:
-        enabled: ${APP_GRPC_FORWARDERS_SUBSCRIPTION_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_SUBSCRIPTION_ENABLED:true}
       charger:
-        enabled: ${APP_GRPC_FORWARDERS_CHARGER_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_CHARGER_ENABLED:true}
       pricing:
-        enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:true}
 
 gateway:
   routes:

@@ -32,24 +32,3 @@ gateway:
     charger: http://127.0.0.1:8086
     ws-connector: http://127.0.0.1:8091
     pricing: http://127.0.0.1:8092
-
-grpc:
-  client:
-    auth-service:
-      address: static://127.0.0.1:9080
-      negotiation-type: plaintext
-    user-service:
-      address: static://127.0.0.1:9082
-      negotiation-type: plaintext
-    payment-service:
-      address: static://127.0.0.1:9083
-      negotiation-type: plaintext
-    subscription-service:
-      address: static://127.0.0.1:9086
-      negotiation-type: plaintext
-    charger-management-service:
-      address: static://127.0.0.1:9086
-      negotiation-type: plaintext
-    pricing-service:
-      address: static://127.0.0.1:9092
-      negotiation-type: plaintext

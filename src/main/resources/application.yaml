@@ -245,6 +245,8 @@ gateway:
     user: ${GATEWAY_ROUTE_USER:http://user-service:8082}
     subscription: ${GATEWAY_ROUTE_SUBSCRIPTION:http://subscription-service:8086}
     payment: ${GATEWAY_ROUTE_PAYMENT:http://payment-service:8083}
+    session: ${GATEWAY_ROUTE_SESSION:http://session-service:8083}
+    station: ${GATEWAY_ROUTE_STATION:http://station-management-service:8081}
     charger-management: ${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}
     charger: ${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}

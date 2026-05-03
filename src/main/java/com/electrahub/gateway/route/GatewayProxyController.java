@@ -1,6 +1,7 @@
 package com.electrahub.gateway.route;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -71,6 +72,7 @@ public class GatewayProxyController {
 
     @RequestMapping("/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request,
+                                        HttpServletResponse servletResponse,
                                         /**
                                          * Executes request body for `GatewayProxyController`.
                                          *
@@ -121,19 +123,16 @@ public class GatewayProxyController {
                 spec.body(body);
             }
 
+            if (isEventStreamRequest(request)) {
+                proxyEventStream(spec, servletResponse);
+                return null;
+            }
+
             return spec.exchange((req, res) -> {
                 byte[] responseBody = res.getBody().readAllBytes();
 
                 HttpHeaders responseHeaders = new HttpHeaders();
-                res.getHeaders().forEach((name, values) -> {
-                    String lowerName = name.toLowerCase(Locale.ROOT);
-                    boolean isPseudoHeader = name.startsWith(":");
-                    if (!isPseudoHeader
-                            && !HOP_BY_HOP_HEADERS.contains(lowerName)
-                            && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
-                        responseHeaders.addAll(name, values);
-                    }
-                });
+                copyResponseHeaders(res.getHeaders(), responseHeaders);
 
                 return new ResponseEntity<>(responseBody, responseHeaders, HttpStatusCode.valueOf(res.getStatusCode().value()));
             });
@@ -149,6 +148,30 @@ public class GatewayProxyController {
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(("{\"error\":\"Gateway error: " + ex.getMessage() + "\"}").getBytes());
         }
+    }
+
+    private void proxyEventStream(RestClient.RequestHeadersSpec<?> spec, HttpServletResponse servletResponse) {
+        spec.exchange((req, res) -> {
+            servletResponse.setStatus(res.getStatusCode().value());
+            copyResponseHeaders(res.getHeaders(), servletResponse);
+            servletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+            servletResponse.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+            servletResponse.setHeader("X-Accel-Buffering", "no");
+            servletResponse.flushBuffer();
+
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = res.getBody().read(buffer)) != -1) {
+                servletResponse.getOutputStream().write(buffer, 0, read);
+                servletResponse.flushBuffer();
+            }
+            return null;
+        });
+    }
+
+    private boolean isEventStreamRequest(HttpServletRequest request) {
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        return accept != null && accept.toLowerCase(Locale.ROOT).contains(MediaType.TEXT_EVENT_STREAM_VALUE);
     }
 
     /**
@@ -178,5 +201,29 @@ public class GatewayProxyController {
                 }
             }
         }
+    }
+
+    private void copyResponseHeaders(HttpHeaders source, HttpHeaders target) {
+        source.forEach((name, values) -> {
+            String lowerName = name.toLowerCase(Locale.ROOT);
+            boolean isPseudoHeader = name.startsWith(":");
+            if (!isPseudoHeader
+                    && !HOP_BY_HOP_HEADERS.contains(lowerName)
+                    && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
+                target.addAll(name, values);
+            }
+        });
+    }
+
+    private void copyResponseHeaders(HttpHeaders source, HttpServletResponse target) {
+        source.forEach((name, values) -> {
+            String lowerName = name.toLowerCase(Locale.ROOT);
+            boolean isPseudoHeader = name.startsWith(":");
+            if (!isPseudoHeader
+                    && !HOP_BY_HOP_HEADERS.contains(lowerName)
+                    && !GATEWAY_MANAGED_CORS_RESPONSE_HEADERS.contains(lowerName)) {
+                values.forEach(value -> target.addHeader(name, value));
+            }
+        });
     }
 }

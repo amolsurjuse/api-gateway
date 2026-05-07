@@ -20,7 +20,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -87,7 +90,8 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
                     path, userId, ex.getMessage());
         }
 
-        TermsGateStatus status = fetchGateStatus(userId);
+        String uiType = resolveUiType(request);
+        TermsGateStatus status = fetchGateStatus(userId, uiType);
         if (status == null || status.termsAccepted()) {
             cacheAccepted(userId, status);
             filterChain.doFilter(request, response);
@@ -97,7 +101,7 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
         writeTermsRequired(response, status);
     }
 
-    private TermsGateStatus fetchGateStatus(UUID userId) {
+    private TermsGateStatus fetchGateStatus(UUID userId, String uiType) {
         String userServiceBaseUrl = routeRegistry.resolve("user");
         if (userServiceBaseUrl == null || userServiceBaseUrl.isBlank()) {
             log.warn("Terms gate skipped because user route is not configured");
@@ -105,7 +109,8 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
         }
         try {
             return restClient.get()
-                    .uri(URI.create(userServiceBaseUrl + "/api/internal/terms/gate-status?userId=" + userId))
+                    .uri(URI.create(userServiceBaseUrl + "/api/internal/terms/gate-status?userId=" + userId
+                            + "&uiType=" + URLEncoder.encode(uiType, StandardCharsets.UTF_8)))
                     .header("X-Internal-Api-Key", internalApiKey)
                     .retrieve()
                     .body(TermsGateStatus.class);
@@ -121,6 +126,41 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
             log.warn("Terms gate check failed uid={} reason={}", userId, ex.getMessage());
             return null;
         }
+    }
+
+    private String resolveUiType(HttpServletRequest request) {
+        String explicit = firstNonBlank(
+                request.getHeader("X-ElectraHub-UI-Type"),
+                request.getHeader("X-Client-Type"),
+                request.getHeader("X-App-Client")
+        );
+        if (explicit != null) {
+            return explicit;
+        }
+        String path = request.getRequestURI();
+        String origin = request.getHeader(HttpHeaders.ORIGIN);
+        String referer = request.getHeader(HttpHeaders.REFERER);
+        if (containsAdminSignal(path) || containsAdminSignal(origin) || containsAdminSignal(referer)) {
+            return "ADMIN_PORTAL";
+        }
+        return "DRIVER_PORTAL";
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private boolean containsAdminSignal(String value) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return normalized.startsWith("/admin/") || normalized.contains("admin-portal") || normalized.contains("admin_portal");
     }
 
     private void cacheAccepted(UUID userId, TermsGateStatus status) {

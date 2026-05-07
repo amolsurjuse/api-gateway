@@ -147,7 +147,8 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
                 "currentVersionNumber", status.currentVersionNumber(),
                 "currentVersionLabel", status.currentVersionLabel(),
                 "contentUrl", status.contentUrl(),
-                "contentSha256", status.contentSha256()
+                "contentSha256", status.contentSha256(),
+                "contentText", status.contentText()
         );
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
@@ -178,7 +179,8 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
             Integer acceptedVersionNumber,
             String currentVersionLabel,
             String contentUrl,
-            String contentSha256
+            String contentSha256,
+            String contentText
     ) {
     }
 }

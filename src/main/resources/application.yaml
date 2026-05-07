@@ -56,7 +56,7 @@ app:
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
   rbac:
-    transport: ${APP_RBAC_TRANSPORT:rest}
+    transport: ${APP_RBAC_TRANSPORT:grpc}
     role-hierarchy: |
       ROLE_SYSTEM_ADMIN > ROLE_USER
     default-decision: DENY
@@ -111,6 +111,46 @@ app:
         path-pattern: "/auth/api/countries/**"
         effect: ALLOW
         allow-anonymous: true
+      - name: terms-current-public
+        methods: [ "GET" ]
+        path-pattern: "/terms/api/v1/terms/current"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: terms-authenticated
+        methods: [ "GET", "POST" ]
+        path-pattern: "/terms/api/v1/terms/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: terms-admin
+        methods: [ "*" ]
+        path-pattern: "/admin/api/v1/terms/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: terms-admin-root
+        methods: [ "GET", "POST" ]
+        path-pattern: "/admin/api/v1/terms"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: legacy-terms-current
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/terms/current"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: legacy-terms-accept
+        methods: [ "POST" ]
+        path-pattern: "/user/api/v1/terms/accept"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: legacy-terms-acceptance-status
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/terms/status"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: legacy-terms-admin
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/admin/terms/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: user-admin
         methods: [ "*" ]
         path-pattern: "/user/api/v1/admin/**"
@@ -146,11 +186,21 @@ app:
         path-pattern: "/charger/api/v1/admin/**"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN" ]
+      - name: charger-admin-chargers-connectors-public
+        methods: [ "GET" ]
+        path-pattern: "/charger/api/v1/admin/chargers/connectors"
+        effect: ALLOW
+        allow-anonymous: true
       - name: charger-service
         methods: [ "*" ]
         path-pattern: "/charger/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: charger-graphql
+        methods: [ "POST", "GET" ]
+        path-pattern: "/charger/graphql"
+        effect: ALLOW
+        allow-anonymous: true
       - name: pricing-admin
         methods: [ "*" ]
         path-pattern: "/pricing/api/v1/pricing/plans/**"
@@ -197,17 +247,17 @@ app:
   grpc:
     forwarders:
       auth:
-        enabled: ${APP_GRPC_FORWARDERS_AUTH_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_AUTH_ENABLED:true}
       user:
-        enabled: ${APP_GRPC_FORWARDERS_USER_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_USER_ENABLED:true}
       payment:
-        enabled: ${APP_GRPC_FORWARDERS_PAYMENT_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_PAYMENT_ENABLED:true}
       subscription:
-        enabled: ${APP_GRPC_FORWARDERS_SUBSCRIPTION_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_SUBSCRIPTION_ENABLED:true}
       charger:
-        enabled: ${APP_GRPC_FORWARDERS_CHARGER_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_CHARGER_ENABLED:true}
       pricing:
-        enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:false}
+        enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:true}
 
 gateway:
   routes:
@@ -219,6 +269,8 @@ gateway:
     charger: ${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     ws-connector: ${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}
     pricing: ${GATEWAY_ROUTE_PRICING:http://pricing-service:8092}
+    terms: ${GATEWAY_ROUTE_TERMS:${GATEWAY_ROUTE_USER:http://user-service:8082}}
+    admin: ${GATEWAY_ROUTE_ADMIN:${GATEWAY_ROUTE_USER:http://user-service:8082}}
 
 grpc:
   client:

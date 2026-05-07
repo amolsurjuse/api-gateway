@@ -72,6 +72,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
+            TermsAcceptanceGateFilter termsAcceptanceGateFilter,
             ApiPolicyAuthorizationManager apiPolicyAuthorizationManager
     ) throws Exception {
 
@@ -83,7 +84,8 @@ public class SecurityConfig {
                         .requestMatchers("/internal/rbac/cache/**").permitAll()
                         .anyRequest().access(apiPolicyAuthorizationManager)
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(termsAcceptanceGateFilter, JwtAuthFilter.class);
 
         return http.build();
     }

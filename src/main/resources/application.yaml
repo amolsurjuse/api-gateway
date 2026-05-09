@@ -111,22 +111,42 @@ app:
         path-pattern: "/auth/api/countries/**"
         effect: ALLOW
         allow-anonymous: true
-      - name: terms-current
+      - name: terms-current-public
+        methods: [ "GET" ]
+        path-pattern: "/terms/api/v1/terms/current"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: terms-authenticated
+        methods: [ "GET", "POST" ]
+        path-pattern: "/terms/api/v1/terms/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: terms-admin
+        methods: [ "*" ]
+        path-pattern: "/admin/api/v1/terms/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: terms-admin-root
+        methods: [ "GET", "POST" ]
+        path-pattern: "/admin/api/v1/terms"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: legacy-terms-current
         methods: [ "GET" ]
         path-pattern: "/user/api/v1/terms/current"
         effect: ALLOW
         allow-anonymous: true
-      - name: terms-accept
+      - name: legacy-terms-accept
         methods: [ "POST" ]
         path-pattern: "/user/api/v1/terms/accept"
         effect: ALLOW
-        allow-anonymous: true
-      - name: terms-acceptance-status
+        required-roles: [ "USER" ]
+      - name: legacy-terms-acceptance-status
         methods: [ "GET" ]
-        path-pattern: "/user/api/v1/terms/acceptance/status"
+        path-pattern: "/user/api/v1/terms/status"
         effect: ALLOW
-        allow-anonymous: true
-      - name: terms-admin
+        required-roles: [ "USER" ]
+      - name: legacy-terms-admin
         methods: [ "*" ]
         path-pattern: "/user/api/v1/admin/terms/**"
         effect: ALLOW
@@ -259,6 +279,8 @@ gateway:
     charger: ${GATEWAY_ROUTES_CHARGER:${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}}
     ws-connector: ${GATEWAY_ROUTES_WS_CONNECTOR:${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}}
     pricing: ${GATEWAY_ROUTES_PRICING:${GATEWAY_ROUTE_PRICING:http://pricing-service:8092}}
+    terms: ${GATEWAY_ROUTES_TERMS:${GATEWAY_ROUTE_TERMS:${GATEWAY_ROUTE_USER:http://user-service:8082}}}
+    admin: ${GATEWAY_ROUTES_ADMIN:${GATEWAY_ROUTE_ADMIN:${GATEWAY_ROUTE_USER:http://user-service:8082}}}
     session: ${GATEWAY_ROUTES_SESSION:${GATEWAY_ROUTE_SESSION:http://session-service:8083}}
     station: ${GATEWAY_ROUTES_STATION:${GATEWAY_ROUTE_STATION:http://station-management-service:8081}}
 

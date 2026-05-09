@@ -22,8 +22,8 @@ public class RoleHierarchyConfig {
      */
     @Bean
     public RoleHierarchy roleHierarchy(RbacProperties rbacProperties) {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering RoleHierarchyConfig#roleHierarchy");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering RoleHierarchyConfig#roleHierarchy with debug context");
+        LOGGER.info(" Entering RoleHierarchyConfig#roleHierarchy");
+        LOGGER.debug(" Entering RoleHierarchyConfig#roleHierarchy with debug context");
         return RoleHierarchyImpl.fromHierarchy(rbacProperties.getRoleHierarchy());
     }
 }

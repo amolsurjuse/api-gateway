@@ -30,7 +30,7 @@ class ApiGatewayApplicationTests {
      */
     @Test
     void contextLoads() {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering ApiGatewayApplicationTests#contextLoads");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering ApiGatewayApplicationTests#contextLoads with debug context");
+        LOGGER.info(" Entering ApiGatewayApplicationTests#contextLoads");
+        LOGGER.debug(" Entering ApiGatewayApplicationTests#contextLoads with debug context");
     }
 }

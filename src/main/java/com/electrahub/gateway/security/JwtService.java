@@ -38,8 +38,8 @@ public class JwtService {
      * @return result produced by parseAndValidate.
      */
     public ParsedToken parseAndValidate(String token) {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering JwtService#parseAndValidate");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering JwtService#parseAndValidate with debug context");
+        LOGGER.info(" Entering JwtService#parseAndValidate");
+        LOGGER.debug(" Entering JwtService#parseAndValidate with debug context");
         Jws<Claims> jws = Jwts.parser()
                 .verifyWith((javax.crypto.SecretKey) signingKey)
                 .build()

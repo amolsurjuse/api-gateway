@@ -31,8 +31,8 @@ class ApiPolicyAuthorizationManagerTest {
      */
     @Test
     void allowsAnonymousForPublicRule() {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule with debug context");
+        LOGGER.info(" Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule");
+        LOGGER.debug(" Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule with debug context");
         var properties = new RbacProperties();
         properties.setRules(List.of(
                 rule("public-health", List.of("GET"), "/actuator/health/**", true, List.of())

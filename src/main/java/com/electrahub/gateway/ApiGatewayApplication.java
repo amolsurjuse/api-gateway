@@ -20,8 +20,8 @@ public class ApiGatewayApplication {
      * @param args input consumed by main.
      */
     public static void main(String[] args) {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering ApiGatewayApplication#main");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering ApiGatewayApplication#main with debug context");
+        LOGGER.info(" Entering ApiGatewayApplication#main");
+        LOGGER.debug(" Entering ApiGatewayApplication#main with debug context");
         SpringApplication.run(ApiGatewayApplication.class, args);
     }
 }

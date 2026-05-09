@@ -23,8 +23,8 @@ public class CorsProperties {
      * @return result produced by getAllowedOriginPatterns.
      */
     public List<String> getAllowedOriginPatterns() {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering CorsProperties#getAllowedOriginPatterns");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering CorsProperties#getAllowedOriginPatterns with debug context");
+        LOGGER.info(" Entering CorsProperties#getAllowedOriginPatterns");
+        LOGGER.debug(" Entering CorsProperties#getAllowedOriginPatterns with debug context");
         return allowedOriginPatterns;
     }
 

@@ -32,8 +32,8 @@ public class RouteRegistry {
      * @return result produced by getRoutes.
      */
     public Map<String, String> getRoutes() {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering RouteRegistry#getRoutes");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering RouteRegistry#getRoutes with debug context");
+        LOGGER.info(" Entering RouteRegistry#getRoutes");
+        LOGGER.debug(" Entering RouteRegistry#getRoutes with debug context");
         return routes;
     }
 

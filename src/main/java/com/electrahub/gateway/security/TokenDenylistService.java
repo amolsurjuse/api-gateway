@@ -24,8 +24,8 @@ public class TokenDenylistService {
                                  * @return result produced by Value.
                                  */
                                 @Value("${app.redis.denylist-prefix}") String prefix) {
-                                    LOGGER.info("CODEx_ENTRY_LOG: Entering TokenDenylistService#Value");
-                                    LOGGER.debug("CODEx_ENTRY_LOG: Entering TokenDenylistService#Value with debug context");
+                                    LOGGER.info(" Entering TokenDenylistService#Value");
+                                    LOGGER.debug(" Entering TokenDenylistService#Value with debug context");
         this.redis = redis;
         this.prefix = prefix;
     }

@@ -26,8 +26,8 @@ public class TokenVersionService {
                                 * @return result produced by Value.
                                 */
                                @Value("${app.redis.token-version-prefix}") String prefix) {
-                                   LOGGER.info("CODEx_ENTRY_LOG: Entering TokenVersionService#Value");
-                                   LOGGER.debug("CODEx_ENTRY_LOG: Entering TokenVersionService#Value with debug context");
+                                   LOGGER.info(" Entering TokenVersionService#Value");
+                                   LOGGER.debug(" Entering TokenVersionService#Value with debug context");
         this.redis = redis;
         this.prefix = prefix;
     }

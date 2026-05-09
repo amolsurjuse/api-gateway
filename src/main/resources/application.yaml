@@ -34,6 +34,13 @@ management:
       show-details: never
       probes:
         enabled: true
+  tracing:
+    sampling:
+      probability: ${API_GATEWAY_TRACING_SAMPLING_PROBABILITY:1.0}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
 
 app:
   security:

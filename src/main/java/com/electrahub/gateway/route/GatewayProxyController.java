@@ -94,8 +94,8 @@ public class GatewayProxyController {
      * @param restClientBuilder input consumed by GatewayProxyController.
      */
     public GatewayProxyController(RouteRegistry routeRegistry, RestClient.Builder restClientBuilder) {
-        log.info("CODEx_ENTRY_LOG: Entering GatewayProxyController#GatewayProxyController");
-        log.debug("CODEx_ENTRY_LOG: Entering GatewayProxyController#GatewayProxyController with debug context");
+        log.info(" Entering GatewayProxyController#GatewayProxyController");
+        log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
     }

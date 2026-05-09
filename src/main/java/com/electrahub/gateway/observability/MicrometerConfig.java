@@ -24,8 +24,8 @@ public class MicrometerConfig {
              * @return result produced by Value.
              */
             @Value("${spring.application.name:unknown-service}") String applicationName) {
-                LOGGER.info("CODEx_ENTRY_LOG: Entering MicrometerConfig#Value");
-                LOGGER.debug("CODEx_ENTRY_LOG: Entering MicrometerConfig#Value with debug context");
+                LOGGER.info(" Entering MicrometerConfig#Value");
+                LOGGER.debug(" Entering MicrometerConfig#Value with debug context");
         return MeterFilter.commonTags(Tags.of("application", applicationName));
     }
 }

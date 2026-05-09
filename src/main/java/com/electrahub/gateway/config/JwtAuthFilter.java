@@ -112,8 +112,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
      * @return result produced by isDenied.
      */
     private boolean isDenied(String jti, String path) {
-        log.info("CODEx_ENTRY_LOG: Entering JwtAuthFilter#isDenied");
-        log.debug("CODEx_ENTRY_LOG: Entering JwtAuthFilter#isDenied with debug context");
+        log.info(" Entering JwtAuthFilter#isDenied");
+        log.debug(" Entering JwtAuthFilter#isDenied with debug context");
         try {
             return denylistService.isDenied(jti);
         } catch (RuntimeException ex) {

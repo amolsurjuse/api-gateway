@@ -29,8 +29,8 @@ public class RbacCacheController {
      * @param rbacPolicySnapshotProvider input consumed by RbacCacheController.
      */
     public RbacCacheController(RbacProperties rbacProperties, RbacPolicySnapshotProvider rbacPolicySnapshotProvider) {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering RbacCacheController#RbacCacheController");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering RbacCacheController#RbacCacheController with debug context");
+        LOGGER.info(" Entering RbacCacheController#RbacCacheController");
+        LOGGER.debug(" Entering RbacCacheController#RbacCacheController with debug context");
         this.rbacProperties = rbacProperties;
         this.rbacPolicySnapshotProvider = rbacPolicySnapshotProvider;
     }

@@ -35,8 +35,8 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
      * @param restClientBuilder input consumed by CachedRbacPolicySnapshotProvider.
      */
     public CachedRbacPolicySnapshotProvider(RbacProperties rbacProperties, RestClient.Builder restClientBuilder) {
-        log.info("CODEx_ENTRY_LOG: Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider");
-        log.debug("CODEx_ENTRY_LOG: Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider with debug context");
+        log.info(" Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider");
+        log.debug(" Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider with debug context");
         this.rbacProperties = rbacProperties;
         this.restClient = restClientBuilder.build();
         this.fallbackSnapshot = RbacPolicySnapshot.fromProperties(rbacProperties);

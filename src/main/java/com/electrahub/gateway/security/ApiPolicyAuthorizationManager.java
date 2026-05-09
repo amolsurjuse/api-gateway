@@ -42,8 +42,8 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
      * @param policySnapshotProvider input consumed by ApiPolicyAuthorizationManager.
      */
     public ApiPolicyAuthorizationManager(RbacPolicySnapshotProvider policySnapshotProvider) {
-        log.info("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager");
-        log.debug("CODEx_ENTRY_LOG: Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager with debug context");
+        log.info(" Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager");
+        log.debug(" Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager with debug context");
         this.policySnapshotProvider = policySnapshotProvider;
     }
 

@@ -34,8 +34,8 @@ public class SecurityConfig {
      * @param corsProperties input consumed by SecurityConfig.
      */
     public SecurityConfig(CorsProperties corsProperties) {
-        LOGGER.info("CODEx_ENTRY_LOG: Entering SecurityConfig#SecurityConfig");
-        LOGGER.debug("CODEx_ENTRY_LOG: Entering SecurityConfig#SecurityConfig with debug context");
+        LOGGER.info(" Entering SecurityConfig#SecurityConfig");
+        LOGGER.debug(" Entering SecurityConfig#SecurityConfig with debug context");
         this.corsProperties = corsProperties;
     }
 

@@ -1,6 +1,7 @@
 package com.electrahub.gateway.route;
 
 import jakarta.servlet.http.HttpServletRequest;
+import com.electrahub.gateway.observability.HttpLoggingSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -24,33 +25,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Transparent reverse proxy controller.
- *
- * Matches any incoming request, extracts the first path segment as the service prefix,
- * resolves the backend URL from RouteRegistry, and forwards the full request
- * (method, headers, query string, body) to the target service.
- *
- * The service prefix is stripped from the forwarded path:
- *   GET /user/api/v1/users?page=0  →  GET http://user-service:8082/api/v1/users?page=0
- */
 @RestController
 public class GatewayProxyController {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayProxyController.class);
 
-    /**
-     * Headers that must NOT be forwarded to the backend (hop-by-hop or proxy-controlled).
-     */
     private static final Set<String> HOP_BY_HOP_HEADERS = Set.of(
             "host", "connection", "keep-alive", "proxy-authenticate",
             "proxy-authorization", "te", "trailer", "transfer-encoding",
             "upgrade", "content-length"
     );
-    /**
-     * CORS headers are managed centrally at API Gateway SecurityConfig.
-     * Strip backend CORS headers to avoid duplicate Access-Control-* values.
-     */
     private static final Set<String> GATEWAY_MANAGED_CORS_RESPONSE_HEADERS = Set.of(
             "access-control-allow-origin",
             "access-control-allow-methods",
@@ -60,11 +44,6 @@ public class GatewayProxyController {
             "access-control-max-age"
     );
 
-    /**
-     * Headers that java.net.http.HttpRequest.Builder refuses to set explicitly.
-     * Filter them out before forwarding so we don't trip IllegalArgumentException.
-     * See {@link HttpRequest.Builder#header(String, String)} restrictions.
-     */
     private static final Set<String> JDK_HTTP_RESTRICTED_HEADERS = Set.of(
             "connection", "content-length", "date", "expect", "from",
             "host", "upgrade", "via", "warning"
@@ -73,44 +52,18 @@ public class GatewayProxyController {
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
 
-    /**
-     * Dedicated HTTP client for streaming responses (SSE / chunked).
-     * RestClient.exchange() consumes the body inside the lambda, which is
-     * incompatible with returning a StreamingResponseBody that copies the
-     * downstream InputStream after the controller method returns. The JDK
-     * client gives us an HttpResponse&lt;InputStream&gt; whose body remains
-     * readable until we close it.
-     */
     private final HttpClient streamingHttpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    /**
-     * Executes gateway proxy controller for `GatewayProxyController`.
-     *
-     * <p>Detailed behavior: follows the current implementation path and
-     * enforces component-specific rules in `com.electrahub.gateway.route`.
-     * @param routeRegistry input consumed by GatewayProxyController.
-     * @param restClientBuilder input consumed by GatewayProxyController.
-     */
     public GatewayProxyController(RouteRegistry routeRegistry, RestClient.Builder restClientBuilder) {
-        log.info(" Entering GatewayProxyController#GatewayProxyController");
-        log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
+        log.info("Gateway proxy controller initialized");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
     }
 
     @RequestMapping("/**")
-    public ResponseEntity<?> proxy(HttpServletRequest request,
-                                   /**
-                                    * Executes request body for `GatewayProxyController`.
-                                    *
-                                    * <p>Detailed behavior: follows the current implementation path and
-                                    * enforces component-specific rules in `com.electrahub.gateway.route`.
-                                    * @param body input consumed by RequestBody.
-                                    * @return result produced by RequestBody.
-                                    */
-                                   @RequestBody(required = false) byte[] body) {
+    public ResponseEntity<?> proxy(HttpServletRequest request, @RequestBody(required = false) byte[] body) {
 
         String path = request.getRequestURI();
         String query = request.getQueryString();
@@ -134,10 +87,14 @@ public class GatewayProxyController {
         if (query != null && !query.isEmpty()) {
             targetUrl += "?" + query;
         }
+        final String resolvedTargetUrl = targetUrl;
 
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
 
-        log.debug("Proxying {} {} → {}", method, path, targetUrl);
+        log.info("Proxy request: method={} path={} target={}", method, path, resolvedTargetUrl);
+        if (log.isDebugEnabled()) {
+            log.debug("Proxy request headers: {}", HttpLoggingSupport.formatRequest(request));
+        }
 
         // SSE / streaming branch: when the client wants text/event-stream we
         // CANNOT call res.getBody().readAllBytes() — the body is a long-lived
@@ -145,12 +102,12 @@ public class GatewayProxyController {
         // client and return a StreamingResponseBody so events are flushed
         // chunk-by-chunk to the client.
         if (acceptsEventStream(request)) {
-            return proxyStreaming(request, targetUrl, method, body);
+            return proxyStreaming(request, resolvedTargetUrl, method, body);
         }
 
         try {
             var spec = restClient.method(method)
-                    .uri(URI.create(targetUrl))
+                    .uri(URI.create(resolvedTargetUrl))
                     .headers(headers -> copyHeaders(request, headers));
 
             if (body != null && body.length > 0) {
@@ -175,16 +132,22 @@ public class GatewayProxyController {
                     }
                 });
 
-                return new ResponseEntity<>(responseBody, responseHeaders, HttpStatusCode.valueOf(res.getStatusCode().value()));
+                ResponseEntity<byte[]> responseEntity = new ResponseEntity<>(responseBody, responseHeaders, HttpStatusCode.valueOf(res.getStatusCode().value()));
+                log.info("Proxy response: method={} target={} status={}", method, resolvedTargetUrl, responseEntity.getStatusCode().value());
+                if (log.isDebugEnabled()) {
+                    log.debug("Proxy response headers: {}", HttpLoggingSupport.formatHeaders(responseHeaders));
+                }
+                return responseEntity;
             });
 
         } catch (RestClientResponseException ex) {
             HttpHeaders errorHeaders = new HttpHeaders();
             errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+            log.warn("Proxy downstream error: method={} target={} status={}", method, resolvedTargetUrl, ex.getStatusCode().value());
             return new ResponseEntity<>(ex.getResponseBodyAsByteArray(), errorHeaders,
                     HttpStatusCode.valueOf(ex.getStatusCode().value()));
         } catch (Exception ex) {
-            log.error("Proxy error for {} {}: {}", method, targetUrl, ex.getMessage());
+            log.error("Proxy error for {} {}: {}", method, resolvedTargetUrl, ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(("{\"error\":\"Gateway error: " + ex.getMessage() + "\"}").getBytes());
@@ -270,6 +233,11 @@ public class GatewayProxyController {
             // proxies (e.g., nginx) to flush chunks immediately.
             responseHeaders.setCacheControl("no-cache");
             responseHeaders.set("X-Accel-Buffering", "no");
+
+            log.info("Streaming proxy response: method={} target={} status={}", method, targetUrl, downstream.statusCode());
+            if (log.isDebugEnabled()) {
+                log.debug("Streaming proxy response headers: {}", HttpLoggingSupport.formatHeaders(responseHeaders));
+            }
 
             StreamingResponseBody streamingBody = outputStream -> {
                 try (InputStream in = downstream.body()) {

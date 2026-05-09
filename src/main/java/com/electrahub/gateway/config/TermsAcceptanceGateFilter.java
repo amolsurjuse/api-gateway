@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
@@ -53,16 +54,24 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@Nullable HttpServletRequest request,
+                                    @Nullable HttpServletResponse response,
+                                    @Nullable FilterChain filterChain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
         if (isExcluded(path) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping terms gate for method={} path={}", request.getMethod(), path);
+            }
             filterChain.doFilter(request, response);
             return;
         }
 
         Object uid = request.getAttribute("uid");
         if (uid == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping terms gate for path={} because no user id is attached to the request", path);
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -71,6 +80,7 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
         try {
             userId = UUID.fromString(String.valueOf(uid));
         } catch (IllegalArgumentException ex) {
+            log.warn("Skipping terms gate for path={} because uid attribute is invalid: {}", path, uid);
             filterChain.doFilter(request, response);
             return;
         }
@@ -79,6 +89,9 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
             String activeVersion = redis.opsForValue().get(ACTIVE_VERSION_KEY);
             String acceptedVersion = activeVersion == null ? null : redis.opsForValue().get(userAcceptedKey(userId));
             if (activeVersion != null && activeVersion.equals(acceptedVersion)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Terms already accepted for uid={} path={} version={}", userId, path, activeVersion);
+                }
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -90,10 +103,16 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
         TermsGateStatus status = fetchGateStatus(userId);
         if (status == null || status.termsAccepted()) {
             cacheAccepted(userId, status);
+            if (log.isDebugEnabled()) {
+                log.debug("Terms gate passed for uid={} path={} status={}", userId, path,
+                        status == null ? "unavailable" : "accepted");
+            }
             filterChain.doFilter(request, response);
             return;
         }
 
+        log.info("Terms acceptance required for uid={} path={} currentVersion={} acceptedVersion={}",
+                userId, path, status.currentVersionNumber(), status.acceptedVersionNumber());
         writeTermsRequired(response, status);
     }
 
@@ -104,6 +123,9 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
             return null;
         }
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Fetching terms gate status for uid={} from {}", userId, userServiceBaseUrl);
+            }
             return restClient.get()
                     .uri(URI.create(userServiceBaseUrl + "/api/internal/terms/gate-status?userId=" + userId))
                     .header("X-Internal-Api-Key", internalApiKey)
@@ -133,6 +155,9 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
             if (status.termsAccepted()) {
                 redis.opsForValue().set(userAcceptedKey(userId), version, USER_ACCEPTED_TTL);
             }
+            if (log.isDebugEnabled()) {
+                log.debug("Cached terms acceptance for uid={} version={}", userId, version);
+            }
         } catch (RuntimeException ex) {
             log.debug("Unable to write Terms gate cache uid={} reason={}", userId, ex.getMessage());
         }
@@ -153,7 +178,7 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
     }
 
     private boolean isExcluded(String path) {
-        return path == null
+        boolean excluded = path == null
                 || path.startsWith("/terms/api/v1/terms/")
                 || path.startsWith("/user/api/v1/terms/")
                 || path.startsWith("/admin/api/v1/terms")
@@ -166,6 +191,10 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
                 || path.startsWith("/v3/api-docs/")
                 || path.startsWith("/swagger-ui")
                 || path.equals("/swagger-ui.html");
+        if (excluded && log.isDebugEnabled()) {
+            log.debug("Terms gate excluded for path={}", path);
+        }
+        return excluded;
     }
 
     private String userAcceptedKey(UUID userId) {

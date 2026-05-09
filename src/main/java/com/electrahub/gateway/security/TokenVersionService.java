@@ -26,8 +26,7 @@ public class TokenVersionService {
                                 * @return result produced by Value.
                                 */
                                @Value("${app.redis.token-version-prefix}") String prefix) {
-                                   LOGGER.info(" Entering TokenVersionService#Value");
-                                   LOGGER.debug(" Entering TokenVersionService#Value with debug context");
+        LOGGER.debug("Initializing JWT token version service");
         this.redis = redis;
         this.prefix = prefix;
     }
@@ -42,6 +41,10 @@ public class TokenVersionService {
      */
     public long getVersion(UUID userId) {
         String v = redis.opsForValue().get(prefix + userId);
-        return (v == null) ? 0L : Long.parseLong(v);
+        long version = (v == null) ? 0L : Long.parseLong(v);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Resolved token version for uid={} version={}", userId, version);
+        }
+        return version;
     }
 }

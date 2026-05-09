@@ -29,8 +29,7 @@ public class RbacProperties {
      * @return result produced by getRoleHierarchy.
      */
     public String getRoleHierarchy() {
-        LOGGER.info(" Entering RbacProperties#getRoleHierarchy");
-        LOGGER.debug(" Entering RbacProperties#getRoleHierarchy with debug context");
+        LOGGER.debug("Returning configured RBAC role hierarchy");
         return roleHierarchy;
     }
 

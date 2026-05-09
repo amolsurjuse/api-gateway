@@ -1,7 +1,5 @@
 package com.electrahub.gateway;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -19,8 +17,6 @@ import org.springframework.test.context.TestPropertySource;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
 })
 class ApiGatewayApplicationTests {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayApplicationTests.class);
-
 
     /**
      * Executes context loads for `ApiGatewayApplicationTests`.
@@ -30,7 +26,5 @@ class ApiGatewayApplicationTests {
      */
     @Test
     void contextLoads() {
-        LOGGER.info(" Entering ApiGatewayApplicationTests#contextLoads");
-        LOGGER.debug(" Entering ApiGatewayApplicationTests#contextLoads with debug context");
     }
 }

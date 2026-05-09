@@ -32,8 +32,7 @@ public class RouteRegistry {
      * @return result produced by getRoutes.
      */
     public Map<String, String> getRoutes() {
-        LOGGER.info(" Entering RouteRegistry#getRoutes");
-        LOGGER.debug(" Entering RouteRegistry#getRoutes with debug context");
+        LOGGER.debug("Returning {} configured gateway routes", routes.size());
         return routes;
     }
 
@@ -56,6 +55,12 @@ public class RouteRegistry {
      * @return the backend URL or null if no route matches
      */
     public String resolve(String prefix) {
-        return routes.get(prefix);
+        String target = routes.get(prefix);
+        if (target == null) {
+            LOGGER.debug("No gateway route found for prefix={}", prefix);
+        } else {
+            LOGGER.debug("Resolved gateway route prefix={} target={}", prefix, target);
+        }
+        return target;
     }
 }

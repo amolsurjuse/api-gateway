@@ -38,8 +38,6 @@ public class JwtService {
      * @return result produced by parseAndValidate.
      */
     public ParsedToken parseAndValidate(String token) {
-        LOGGER.info(" Entering JwtService#parseAndValidate");
-        LOGGER.debug(" Entering JwtService#parseAndValidate with debug context");
         Jws<Claims> jws = Jwts.parser()
                 .verifyWith((javax.crypto.SecretKey) signingKey)
                 .build()
@@ -48,6 +46,7 @@ public class JwtService {
         Claims c = jws.getPayload();
 
         if (!issuer.equals(c.getIssuer())) {
+            LOGGER.warn("JWT rejected because issuer did not match expected value");
             throw new JwtException("Invalid issuer");
         }
 
@@ -62,7 +61,7 @@ public class JwtService {
             default -> List.of(String.valueOf(rolesObj));
         };
 
-        return new ParsedToken(
+        ParsedToken parsedToken = new ParsedToken(
                 c.getSubject(),
                 c.getId(),
                 String.valueOf(c.get("uid")),
@@ -70,6 +69,10 @@ public class JwtService {
                 c.getExpiration(),
                 roles
         );
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Parsed JWT successfully: subject={} uid={} roles={}", parsedToken.subjectEmail(), parsedToken.uid(), parsedToken.roles());
+        }
+        return parsedToken;
     }
 
     /**

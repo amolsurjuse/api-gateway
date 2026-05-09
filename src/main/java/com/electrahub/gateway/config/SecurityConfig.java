@@ -34,8 +34,7 @@ public class SecurityConfig {
      * @param corsProperties input consumed by SecurityConfig.
      */
     public SecurityConfig(CorsProperties corsProperties) {
-        LOGGER.info(" Entering SecurityConfig#SecurityConfig");
-        LOGGER.debug(" Entering SecurityConfig#SecurityConfig with debug context");
+        LOGGER.debug("Initializing gateway security configuration");
         this.corsProperties = corsProperties;
     }
 
@@ -48,6 +47,8 @@ public class SecurityConfig {
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        LOGGER.debug("Building CORS configuration with {} allowed origin pattern(s)",
+                corsProperties.getAllowedOriginPatterns() == null ? 0 : corsProperties.getAllowedOriginPatterns().size());
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(corsProperties.getAllowedOriginPatterns());
         config.setAllowedMethods(List.of(
@@ -74,7 +75,9 @@ public class SecurityConfig {
             JwtAuthFilter jwtAuthFilter,
             TermsAcceptanceGateFilter termsAcceptanceGateFilter,
             ApiPolicyAuthorizationManager apiPolicyAuthorizationManager
-    ) throws Exception {
+    ) {
+
+        LOGGER.debug("Configuring stateless security filter chain with JWT auth, terms gate, and RBAC authorization");
 
         http
                 .cors(cors -> {})

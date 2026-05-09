@@ -24,8 +24,7 @@ public class TokenDenylistService {
                                  * @return result produced by Value.
                                  */
                                 @Value("${app.redis.denylist-prefix}") String prefix) {
-                                    LOGGER.info(" Entering TokenDenylistService#Value");
-                                    LOGGER.debug(" Entering TokenDenylistService#Value with debug context");
+        LOGGER.debug("Initializing JWT denylist service");
         this.redis = redis;
         this.prefix = prefix;
     }
@@ -39,7 +38,13 @@ public class TokenDenylistService {
      * @return result produced by isDenied.
      */
     public boolean isDenied(String jti) {
-        if (jti == null || jti.isBlank()) return false;
-        return Boolean.TRUE.equals(redis.hasKey(prefix + jti));
+        if (jti == null || jti.isBlank()) {
+            return false;
+        }
+        boolean denied = Boolean.TRUE.equals(redis.hasKey(prefix + jti));
+        if (denied && LOGGER.isDebugEnabled()) {
+            LOGGER.debug("JWT denylist match found for jti={}", jti);
+        }
+        return denied;
     }
 }

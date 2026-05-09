@@ -23,8 +23,7 @@ public class CorsProperties {
      * @return result produced by getAllowedOriginPatterns.
      */
     public List<String> getAllowedOriginPatterns() {
-        LOGGER.info(" Entering CorsProperties#getAllowedOriginPatterns");
-        LOGGER.debug(" Entering CorsProperties#getAllowedOriginPatterns with debug context");
+        LOGGER.debug("Returning {} configured CORS origin pattern(s)", allowedOriginPatterns.size());
         return allowedOriginPatterns;
     }
 

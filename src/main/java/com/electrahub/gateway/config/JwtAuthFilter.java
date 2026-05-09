@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -40,11 +41,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(@Nullable HttpServletRequest request,
+                                    @Nullable HttpServletResponse response,
+                                    @Nullable FilterChain chain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping JWT authentication for path={} because no bearer token was provided", request.getRequestURI());
+            }
             chain.doFilter(request, response);
             return;
         }
@@ -54,14 +60,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             JwtService.ParsedToken parsed = jwtService.parseAndValidate(token);
             if (!jwtService.isNotExpired(parsed.exp())) {
-                log.debug("JWT rejected: token expired for subject={} path={}",
+                log.info("JWT rejected: expired token subject={} path={}",
                         parsed.subjectEmail(), request.getRequestURI());
                 chain.doFilter(request, response);
                 return;
             }
 
             if (isDenied(parsed.jti(), request.getRequestURI())) {
-                log.debug("JWT rejected: denylisted jti={} path={}",
+                log.info("JWT rejected: denylisted token jti={} path={}",
                         parsed.jti(), request.getRequestURI());
                 chain.doFilter(request, response);
                 return;
@@ -70,7 +76,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UUID userId = UUID.fromString(parsed.uid());
             long currentVersion = resolveCurrentTokenVersion(userId, parsed.tv(), request.getRequestURI());
             if (parsed.tv() != currentVersion) {
-                log.debug("JWT rejected: tokenVersion mismatch uid={} tokenTv={} currentTv={} path={}",
+                log.info("JWT rejected: token version mismatch uid={} tokenTv={} currentTv={} path={}",
                         userId, parsed.tv(), currentVersion, request.getRequestURI());
                 chain.doFilter(request, response);
                 return;
@@ -90,7 +96,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 request.setAttribute("jti", parsed.jti());
                 request.setAttribute("exp", parsed.exp());
 
-                log.debug("JWT accepted: uid={} subject={} roles={} path={}",
+                log.info("JWT accepted: uid={} subject={} roles={} path={}",
                         parsed.uid(), parsed.subjectEmail(), parsed.roles(), request.getRequestURI());
             }
 
@@ -112,10 +118,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
      * @return result produced by isDenied.
      */
     private boolean isDenied(String jti, String path) {
-        log.info(" Entering JwtAuthFilter#isDenied");
-        log.debug(" Entering JwtAuthFilter#isDenied with debug context");
         try {
-            return denylistService.isDenied(jti);
+            boolean denied = denylistService.isDenied(jti);
+            if (denied) {
+                log.debug("JWT denylist hit for path={} jti={}", path, jti);
+            }
+            return denied;
         } catch (RuntimeException ex) {
             // Fail open for denylist/version checks when Redis is unavailable.
             // JWT signature + expiration + issuer validation still apply.
@@ -137,7 +145,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
      */
     private long resolveCurrentTokenVersion(UUID userId, long tokenVersionFromJwt, String path) {
         try {
-            return tokenVersionService.getVersion(userId);
+            long version = tokenVersionService.getVersion(userId);
+            if (log.isDebugEnabled()) {
+                log.debug("Resolved token version for path={} uid={} version={}", path, userId, version);
+            }
+            return version;
         } catch (RuntimeException ex) {
             // Preserve availability if Redis is down by trusting token version claim.
             log.warn("Redis token-version check unavailable; using JWT token version path={} uid={} reason={}",

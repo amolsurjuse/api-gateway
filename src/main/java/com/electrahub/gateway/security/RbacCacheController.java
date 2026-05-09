@@ -29,8 +29,7 @@ public class RbacCacheController {
      * @param rbacPolicySnapshotProvider input consumed by RbacCacheController.
      */
     public RbacCacheController(RbacProperties rbacProperties, RbacPolicySnapshotProvider rbacPolicySnapshotProvider) {
-        LOGGER.info(" Entering RbacCacheController#RbacCacheController");
-        LOGGER.debug(" Entering RbacCacheController#RbacCacheController with debug context");
+        LOGGER.debug("Initializing RBAC cache controller");
         this.rbacProperties = rbacProperties;
         this.rbacPolicySnapshotProvider = rbacPolicySnapshotProvider;
     }
@@ -40,10 +39,13 @@ public class RbacCacheController {
     public void invalidate(
             @RequestHeader(value = "X-Internal-Api-Key", required = false) String internalApiKey
     ) {
+        LOGGER.info("RBAC cache invalidation requested");
         if (internalApiKey == null || !internalApiKey.equals(rbacProperties.getInternalApiKey())) {
+            LOGGER.warn("RBAC cache invalidation rejected due to invalid internal API key");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal API key");
         }
         rbacPolicySnapshotProvider.invalidate();
         rbacPolicySnapshotProvider.currentPolicy();
+        LOGGER.info("RBAC cache invalidated successfully");
     }
 }

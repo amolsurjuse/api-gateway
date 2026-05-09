@@ -20,8 +20,7 @@ public class HttpClientConfig {
      */
     @Bean
     RestClient.Builder restClientBuilder() {
-        LOGGER.info(" Entering HttpClientConfig#restClientBuilder");
-        LOGGER.debug(" Entering HttpClientConfig#restClientBuilder with debug context");
+        LOGGER.debug("Creating shared RestClient.Builder for gateway outbound calls");
         return RestClient.builder();
     }
 }

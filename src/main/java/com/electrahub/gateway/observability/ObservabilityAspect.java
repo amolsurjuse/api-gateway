@@ -32,8 +32,7 @@ public class ObservabilityAspect {
      * @param meterRegistry input consumed by ObservabilityAspect.
      */
     public ObservabilityAspect(MeterRegistry meterRegistry) {
-        LOGGER.info(" Entering ObservabilityAspect#ObservabilityAspect");
-        LOGGER.debug(" Entering ObservabilityAspect#ObservabilityAspect with debug context");
+        LOGGER.debug("Initializing observability aspect");
         this.meterRegistry = meterRegistry;
     }
 
@@ -44,14 +43,7 @@ public class ObservabilityAspect {
             "within(@org.springframework.stereotype.Repository *) || " +
             "within(@org.springframework.stereotype.Component *)) && " +
             "!within(com.electrahub..observability..*)")
-    /**
-     * Executes observe for `ObservabilityAspect`.
-     *
-     * <p>Detailed behavior: follows the current implementation path and
-     * enforces component-specific rules in `com.electrahub.gateway.observability`.
-     * @param joinPoint input consumed by observe.
-     * @return result produced by observe.
-     */
+    @SuppressWarnings("unused")
     public Object observe(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String className = signature.getDeclaringType().getSimpleName();

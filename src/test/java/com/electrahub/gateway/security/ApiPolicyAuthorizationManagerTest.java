@@ -1,7 +1,5 @@
 package com.electrahub.gateway.security;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 import com.electrahub.gateway.config.RbacProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -20,8 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiPolicyAuthorizationManagerTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiPolicyAuthorizationManagerTest.class);
-
 
     /**
      * Executes allows anonymous for public rule for `ApiPolicyAuthorizationManagerTest`.
@@ -31,8 +27,6 @@ class ApiPolicyAuthorizationManagerTest {
      */
     @Test
     void allowsAnonymousForPublicRule() {
-        LOGGER.info(" Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule");
-        LOGGER.debug(" Entering ApiPolicyAuthorizationManagerTest#allowsAnonymousForPublicRule with debug context");
         var properties = new RbacProperties();
         properties.setRules(List.of(
                 rule("public-health", List.of("GET"), "/actuator/health/**", true, List.of())

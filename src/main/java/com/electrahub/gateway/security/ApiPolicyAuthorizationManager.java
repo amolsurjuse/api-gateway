@@ -42,8 +42,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
      * @param policySnapshotProvider input consumed by ApiPolicyAuthorizationManager.
      */
     public ApiPolicyAuthorizationManager(RbacPolicySnapshotProvider policySnapshotProvider) {
-        log.info(" Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager");
-        log.debug(" Entering ApiPolicyAuthorizationManager#ApiPolicyAuthorizationManager with debug context");
+        log.debug("Initializing RBAC authorization manager");
         this.policySnapshotProvider = policySnapshotProvider;
     }
 
@@ -231,6 +230,8 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
 
             CompiledPolicy resolved = new CompiledPolicy(snapshot.version(), hierarchy, defaultDecision, compiledRules);
             compiledPolicy = resolved;
+            log.debug("Compiled RBAC policy refreshed: version={} rules={} defaultDecision={}",
+                    resolved.version(), resolved.rules().size(), resolved.defaultDecision());
             return resolved;
         }
     }

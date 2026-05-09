@@ -35,8 +35,7 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
      * @param restClientBuilder input consumed by CachedRbacPolicySnapshotProvider.
      */
     public CachedRbacPolicySnapshotProvider(RbacProperties rbacProperties, RestClient.Builder restClientBuilder) {
-        log.info(" Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider");
-        log.debug(" Entering CachedRbacPolicySnapshotProvider#CachedRbacPolicySnapshotProvider with debug context");
+        log.debug("Initializing cached RBAC policy provider");
         this.rbacProperties = rbacProperties;
         this.restClient = restClientBuilder.build();
         this.fallbackSnapshot = RbacPolicySnapshot.fromProperties(rbacProperties);
@@ -123,7 +122,7 @@ public class CachedRbacPolicySnapshotProvider implements RbacPolicySnapshotProvi
                 RbacPolicySnapshot snapshot = toSnapshot(response);
                 state.set(new PolicyState(snapshot, now));
                 invalidated = false;
-                log.debug("RBAC policy refreshed from remote source: version={} rules={}", snapshot.version(), snapshot.rules().size());
+                log.info("RBAC policy refreshed from remote source: version={} rules={}", snapshot.version(), snapshot.rules().size());
             } catch (Exception ex) {
                 state.set(new PolicyState(state.get().snapshot(), now));
                 invalidated = false;

@@ -28,6 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final TokenDenylistService denylistService;
     private final TokenVersionService tokenVersionService;
+    private static final String WWW_AUTHENTICATE_BEARER_INVALID_TOKEN = "Bearer error=\"invalid_token\"";
 
     public JwtAuthFilter(
             JwtService jwtService,
@@ -56,14 +57,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (!jwtService.isNotExpired(parsed.exp())) {
                 log.debug("JWT rejected: token expired for subject={} path={}",
                         parsed.subjectEmail(), request.getRequestURI());
-                chain.doFilter(request, response);
+                rejectUnauthorized(response);
                 return;
             }
 
             if (isDenied(parsed.jti(), request.getRequestURI())) {
                 log.debug("JWT rejected: denylisted jti={} path={}",
                         parsed.jti(), request.getRequestURI());
-                chain.doFilter(request, response);
+                rejectUnauthorized(response);
                 return;
             }
 
@@ -72,7 +73,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (parsed.tv() != currentVersion) {
                 log.debug("JWT rejected: tokenVersion mismatch uid={} tokenTv={} currentTv={} path={}",
                         userId, parsed.tv(), currentVersion, request.getRequestURI());
-                chain.doFilter(request, response);
+                rejectUnauthorized(response);
                 return;
             }
 
@@ -97,9 +98,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         } catch (Exception ex) {
             log.warn("JWT processing failed for path={} reason={}",
                     request.getRequestURI(), ex.getMessage());
+            rejectUnauthorized(response);
+            return;
         }
 
         chain.doFilter(request, response);
+    }
+
+    private void rejectUnauthorized(HttpServletResponse response) throws IOException {
+        SecurityContextHolder.clearContext();
+        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, WWW_AUTHENTICATE_BEARER_INVALID_TOKEN);
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
     }
 
     /**

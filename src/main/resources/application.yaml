@@ -60,6 +60,15 @@ app:
       - "https://driver-portal-*.electrahub.com:*"
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
+      - "https://dev.electrahub.net"
+      - "https://api-dev.electrahub.net"
+      - "https://driver-dev.electrahub.net"
+      - "https://driver-portal-dev.electrahub.net"
+      - "https://admin-dev.electrahub.net"
+      - "https://admin-portal-dev.electrahub.net"
+      - "https://simulator-dev.electrahub.net"
+      - "https://ocpp-simulator-dev.electrahub.net"
+      - "https://argocd-dev.electrahub.net"
   rbac:
     transport: ${APP_RBAC_TRANSPORT:grpc}
     role-hierarchy: |

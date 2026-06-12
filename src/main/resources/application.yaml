@@ -45,6 +45,11 @@ app:
     jwt:
       issuer: ${APP_SECURITY_JWT_ISSUER:auth-service}
       secret: ${APP_SECURITY_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_64+_CHAR_SECRET_CHANGE_ME}
+  http-logging:
+    enabled: ${APP_HTTP_LOGGING_ENABLED:true}
+    include-headers: ${APP_HTTP_LOGGING_INCLUDE_HEADERS:true}
+    include-bodies: ${APP_HTTP_LOGGING_INCLUDE_BODIES:true}
+    max-body-length: ${APP_HTTP_LOGGING_MAX_BODY_LENGTH:4096}
   cors:
     allowed-origin-patterns:
       - "http://localhost:*"
@@ -61,6 +66,8 @@ app:
       - "https://dev.electrahub.com"
       - "https://dev.electrahub.com:8443"
       - "https://dev.electrahub.net"
+      - "https://electrahub.net"
+      - "https://www.electrahub.net"
       - "https://api-dev.electrahub.net"
       - "https://driver-dev.electrahub.net"
       - "https://driver-portal-dev.electrahub.net"
@@ -128,6 +135,11 @@ app:
       - name: terms-current-public
         methods: [ "GET" ]
         path-pattern: "/terms/api/v1/terms/current"
+        effect: ALLOW
+        allow-anonymous: true
+      - name: notification-contact-public
+        methods: [ "POST" ]
+        path-pattern: "/notifications/api/v1/public/contact-inquiries"
         effect: ALLOW
         allow-anonymous: true
       - name: terms-authenticated
@@ -308,6 +320,7 @@ gateway:
     admin: ${GATEWAY_ROUTES_ADMIN:${GATEWAY_ROUTE_ADMIN:${GATEWAY_ROUTE_USER:http://user-service:8082}}}
     session: ${GATEWAY_ROUTES_SESSION:${GATEWAY_ROUTE_SESSION:http://session-service:8083}}
     station: ${GATEWAY_ROUTES_STATION:${GATEWAY_ROUTE_STATION:http://station-management-service:8081}}
+    notifications: ${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}
 
 grpc:
   client:

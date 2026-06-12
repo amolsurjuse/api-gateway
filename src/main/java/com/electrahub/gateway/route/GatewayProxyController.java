@@ -72,6 +72,7 @@ public class GatewayProxyController {
 
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
+    private final HttpExchangeLogger httpExchangeLogger;
 
     /**
      * Dedicated HTTP client for streaming responses (SSE / chunked).
@@ -93,11 +94,16 @@ public class GatewayProxyController {
      * @param routeRegistry input consumed by GatewayProxyController.
      * @param restClientBuilder input consumed by GatewayProxyController.
      */
-    public GatewayProxyController(RouteRegistry routeRegistry, RestClient.Builder restClientBuilder) {
+    public GatewayProxyController(
+            RouteRegistry routeRegistry,
+            RestClient.Builder restClientBuilder,
+            HttpExchangeLogger httpExchangeLogger
+    ) {
         log.info(" Entering GatewayProxyController#GatewayProxyController");
         log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
+        this.httpExchangeLogger = httpExchangeLogger;
     }
 
     @RequestMapping("/**")
@@ -114,30 +120,40 @@ public class GatewayProxyController {
 
         String path = request.getRequestURI();
         String query = request.getQueryString();
+        HttpMethod method = HttpMethod.valueOf(request.getMethod());
+        long startedAtNanos = httpExchangeLogger.started();
 
         // Extract the service prefix (first path segment)
         String prefix = extractPrefix(path);
         if (prefix == null) {
+            byte[] responseBody = "{\"error\":\"No route matched\"}".getBytes();
+            httpExchangeLogger.logRequest(request, method, path, null, body);
+            httpExchangeLogger.logResponse(request, method, path, null,
+                    HttpStatus.NOT_FOUND.value(), new HttpHeaders(), responseBody, startedAtNanos);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("{\"error\":\"No route matched\"}".getBytes());
+                    .body(responseBody);
         }
 
         String backendUrl = routeRegistry.resolve(prefix);
         if (backendUrl == null) {
+            byte[] responseBody = ("{\"error\":\"Unknown service: " + prefix + "\"}").getBytes();
+            httpExchangeLogger.logRequest(request, method, path, null, body);
+            httpExchangeLogger.logResponse(request, method, path, null,
+                    HttpStatus.NOT_FOUND.value(), new HttpHeaders(), responseBody, startedAtNanos);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(("{\"error\":\"Unknown service: " + prefix + "\"}").getBytes());
+                    .body(responseBody);
         }
 
         // Strip the prefix from the path: /user/api/v1/users → /api/v1/users
         String downstreamPath = path.substring(prefix.length() + 1); // +1 for leading /
-        String targetUrl = backendUrl + downstreamPath;
+        String resolvedTargetUrl = backendUrl + downstreamPath;
         if (query != null && !query.isEmpty()) {
-            targetUrl += "?" + query;
+            resolvedTargetUrl += "?" + query;
         }
-
-        HttpMethod method = HttpMethod.valueOf(request.getMethod());
+        final String targetUrl = resolvedTargetUrl;
 
         log.debug("Proxying {} {} → {}", method, path, targetUrl);
+        httpExchangeLogger.logRequest(request, method, path, targetUrl, body);
 
         // SSE / streaming branch: when the client wants text/event-stream we
         // CANNOT call res.getBody().readAllBytes() — the body is a long-lived
@@ -145,7 +161,7 @@ public class GatewayProxyController {
         // client and return a StreamingResponseBody so events are flushed
         // chunk-by-chunk to the client.
         if (acceptsEventStream(request)) {
-            return proxyStreaming(request, targetUrl, method, body);
+            return proxyStreaming(request, targetUrl, method, body, path, startedAtNanos);
         }
 
         try {
@@ -175,15 +191,21 @@ public class GatewayProxyController {
                     }
                 });
 
-                return new ResponseEntity<>(responseBody, responseHeaders, HttpStatusCode.valueOf(res.getStatusCode().value()));
+                HttpStatusCode statusCode = HttpStatusCode.valueOf(res.getStatusCode().value());
+                httpExchangeLogger.logResponse(request, method, path, targetUrl,
+                        statusCode.value(), responseHeaders, responseBody, startedAtNanos);
+                return new ResponseEntity<>(responseBody, responseHeaders, statusCode);
             });
 
         } catch (RestClientResponseException ex) {
             HttpHeaders errorHeaders = new HttpHeaders();
             errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+            httpExchangeLogger.logResponse(request, method, path, targetUrl,
+                    ex.getStatusCode().value(), errorHeaders, ex.getResponseBodyAsByteArray(), startedAtNanos);
             return new ResponseEntity<>(ex.getResponseBodyAsByteArray(), errorHeaders,
                     HttpStatusCode.valueOf(ex.getStatusCode().value()));
         } catch (Exception ex) {
+            httpExchangeLogger.logFailure(request, method, path, targetUrl, ex, startedAtNanos);
             log.error("Proxy error for {} {}: {}", method, targetUrl, ex.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -219,7 +241,9 @@ public class GatewayProxyController {
     private ResponseEntity<StreamingResponseBody> proxyStreaming(HttpServletRequest request,
                                                                  String targetUrl,
                                                                  HttpMethod method,
-                                                                 byte[] body) {
+                                                                 byte[] body,
+                                                                 String path,
+                                                                 long startedAtNanos) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(targetUrl))
@@ -270,6 +294,8 @@ public class GatewayProxyController {
             // proxies (e.g., nginx) to flush chunks immediately.
             responseHeaders.setCacheControl("no-cache");
             responseHeaders.set("X-Accel-Buffering", "no");
+            httpExchangeLogger.logStreamingResponseStarted(request, method, path, targetUrl,
+                    downstream.statusCode(), responseHeaders, startedAtNanos);
 
             StreamingResponseBody streamingBody = outputStream -> {
                 try (InputStream in = downstream.body()) {
@@ -291,6 +317,7 @@ public class GatewayProxyController {
                     HttpStatusCode.valueOf(downstream.statusCode()));
 
         } catch (Exception ex) {
+            httpExchangeLogger.logFailure(request, method, path, targetUrl, ex, startedAtNanos);
             log.error("Streaming proxy error for {} {}: {}", method, targetUrl, ex.getMessage());
             HttpHeaders errorHeaders = new HttpHeaders();
             errorHeaders.setContentType(MediaType.APPLICATION_JSON);

@@ -156,6 +156,7 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
         return path == null
                 || path.startsWith("/terms/api/v1/terms/")
                 || path.startsWith("/user/api/v1/terms/")
+                || path.startsWith("/auth/api/terms/")
                 || path.startsWith("/admin/api/v1/terms")
                 || path.equals("/auth/api/auth/login")
                 || path.equals("/auth/api/auth/register")
@@ -165,7 +166,8 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
                 || path.startsWith("/actuator/")
                 || path.startsWith("/v3/api-docs/")
                 || path.startsWith("/swagger-ui")
-                || path.equals("/swagger-ui.html");
+                || path.equals("/swagger-ui.html")
+                || path.startsWith("/internal/api/");
     }
 
     private String userAcceptedKey(UUID userId) {

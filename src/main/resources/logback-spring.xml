@@ -5,7 +5,7 @@
 
     <!-- LOG_FILE_ENABLED defaults to false — containers/pods log to stdout only.
          Set LOG_FILE_ENABLED=true ONLY for bare-metal / VM deployments with a writable log directory.
-         Never set this to true in Kubernetes pod specs — it will fail because no log dir exists. -->
+         Never set this to true in Kubernetes pod specs — the log directory will not exist. -->
     <property name="LOG_FILE_ENABLED" value="${LOG_FILE_ENABLED:-false}"/>
     <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
 
@@ -20,27 +20,29 @@
         </encoder>
     </appender>
 
-    <!-- Rolling file appender — only active when LOG_FILE_ENABLED=true -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${APP_NAME}.log</file>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>14</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
-
     <root level="${LOGGING_LEVEL_ROOT:-INFO}">
         <appender-ref ref="CONSOLE"/>
-        <!-- Conditional file appender — requires janino on classpath -->
-        <if condition='property("LOG_FILE_ENABLED").equals("true")'>
-            <then>
-                <appender-ref ref="FILE"/>
-            </then>
-        </if>
     </root>
+
+    <!-- Rolling file appender — entire block inside <if> so Logback never parses or starts it
+         unless LOG_FILE_ENABLED=true. This prevents FileNotFoundException in containers. -->
+    <if condition='property("LOG_FILE_ENABLED").equals("true")'>
+        <then>
+            <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <file>${LOG_DIR}/${APP_NAME}.log</file>
+                <encoder>
+                    <pattern>${LOG_PATTERN}</pattern>
+                </encoder>
+                <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                    <fileNamePattern>${LOG_DIR}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                    <maxFileSize>10MB</maxFileSize>
+                    <maxHistory>14</maxHistory>
+                    <totalSizeCap>1GB</totalSizeCap>
+                </rollingPolicy>
+            </appender>
+            <root level="${LOGGING_LEVEL_ROOT:-INFO}">
+                <appender-ref ref="FILE"/>
+            </root>
+        </then>
+    </if>
 </configuration>

@@ -24,6 +24,7 @@ import java.util.UUID;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+    private static final long TERMS_PENDING_TOKEN_VERSION = 0L;
 
     private final JwtService jwtService;
     private final TokenDenylistService denylistService;
@@ -70,7 +71,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             UUID userId = UUID.fromString(parsed.uid());
             long currentVersion = resolveCurrentTokenVersion(userId, parsed.tv(), request.getRequestURI());
-            if (parsed.tv() != currentVersion) {
+            if (!isTermsPendingToken(parsed.tv()) && parsed.tv() != currentVersion) {
                 log.debug("JWT rejected: tokenVersion mismatch uid={} tokenTv={} currentTv={} path={}",
                         userId, parsed.tv(), currentVersion, request.getRequestURI());
                 rejectUnauthorized(response);
@@ -90,6 +91,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 request.setAttribute("uid", parsed.uid());
                 request.setAttribute("jti", parsed.jti());
                 request.setAttribute("exp", parsed.exp());
+                request.setAttribute("tv", parsed.tv());
 
                 log.debug("JWT accepted: uid={} subject={} roles={} path={}",
                         parsed.uid(), parsed.subjectEmail(), parsed.roles(), request.getRequestURI());
@@ -153,5 +155,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     path, userId, ex.getMessage());
             return tokenVersionFromJwt;
         }
+    }
+
+    private boolean isTermsPendingToken(long tokenVersion) {
+        return tokenVersion == TERMS_PENDING_TOKEN_VERSION;
     }
 }

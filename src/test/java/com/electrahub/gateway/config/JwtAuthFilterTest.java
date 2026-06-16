@@ -108,4 +108,69 @@ class JwtAuthFilterTest {
         assertThat(response.getStatus()).isEqualTo(MockHttpServletResponse.SC_OK);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
     }
+
+    @Test
+    void allowsTermsPendingTokenVersionToReachTermsGate() throws Exception {
+        String token = "terms-pending-token";
+        UUID uid = UUID.randomUUID();
+        Date expiresAt = new Date(System.currentTimeMillis() + 600_000L);
+        JwtService.ParsedToken parsedToken = new JwtService.ParsedToken(
+                "user@example.com",
+                "jti-terms-pending",
+                uid.toString(),
+                0L,
+                expiresAt,
+                List.of("USER")
+        );
+
+        when(jwtService.parseAndValidate(token)).thenReturn(parsedToken);
+        when(jwtService.isNotExpired(expiresAt)).thenReturn(true);
+        when(denylistService.isDenied("jti-terms-pending")).thenReturn(false);
+        when(tokenVersionService.getVersion(uid)).thenReturn(3L);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/station/api/v1/stations");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(chain.getRequest()).isSameAs(request);
+        assertThat(response.getStatus()).isEqualTo(MockHttpServletResponse.SC_OK);
+        assertThat(request.getAttribute("uid")).isEqualTo(uid.toString());
+        assertThat(request.getAttribute("tv")).isEqualTo(0L);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void returns401WhenNonZeroTokenVersionIsStale() throws Exception {
+        String token = "stale-token";
+        UUID uid = UUID.randomUUID();
+        Date expiresAt = new Date(System.currentTimeMillis() + 600_000L);
+        JwtService.ParsedToken parsedToken = new JwtService.ParsedToken(
+                "user@example.com",
+                "jti-stale",
+                uid.toString(),
+                2L,
+                expiresAt,
+                List.of("USER")
+        );
+
+        when(jwtService.parseAndValidate(token)).thenReturn(parsedToken);
+        when(jwtService.isNotExpired(expiresAt)).thenReturn(true);
+        when(denylistService.isDenied("jti-stale")).thenReturn(false);
+        when(tokenVersionService.getVersion(uid)).thenReturn(3L);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/session/api/v1/sessions/history");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(MockHttpServletResponse.SC_UNAUTHORIZED);
+        assertThat(response.getHeader(HttpHeaders.WWW_AUTHENTICATE)).contains("invalid_token");
+        assertThat(chain.getRequest()).isNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
 }

@@ -59,6 +59,16 @@ public class GatewayProxyController {
             "access-control-allow-credentials",
             "access-control-max-age"
     );
+    /**
+     * CORS negotiation is handled by the gateway. Do not forward these request
+     * headers to downstream services, otherwise their local CORS configuration
+     * can reject browser requests before the service controller runs.
+     */
+    private static final Set<String> GATEWAY_MANAGED_CORS_REQUEST_HEADERS = Set.of(
+            "origin",
+            "access-control-request-method",
+            "access-control-request-headers"
+    );
 
     /**
      * Headers that java.net.http.HttpRequest.Builder refuses to set explicitly.
@@ -259,7 +269,9 @@ public class GatewayProxyController {
             while (headerNames.hasMoreElements()) {
                 String name = headerNames.nextElement();
                 String lower = name.toLowerCase(Locale.ROOT);
-                if (HOP_BY_HOP_HEADERS.contains(lower) || JDK_HTTP_RESTRICTED_HEADERS.contains(lower)) {
+                if (HOP_BY_HOP_HEADERS.contains(lower)
+                        || JDK_HTTP_RESTRICTED_HEADERS.contains(lower)
+                        || GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lower)) {
                     continue;
                 }
                 Enumeration<String> values = request.getHeaders(name);
@@ -370,7 +382,9 @@ public class GatewayProxyController {
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String name = headerNames.nextElement();
-            if (!HOP_BY_HOP_HEADERS.contains(name.toLowerCase())) {
+            String lowerName = name.toLowerCase(Locale.ROOT);
+            if (!HOP_BY_HOP_HEADERS.contains(lowerName)
+                    && !GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lowerName)) {
                 Enumeration<String> values = request.getHeaders(name);
                 while (values.hasMoreElements()) {
                     headers.add(name, values.nextElement());

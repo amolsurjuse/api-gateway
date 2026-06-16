@@ -49,6 +49,7 @@ app:
     enabled: ${APP_HTTP_LOGGING_ENABLED:true}
     include-headers: ${APP_HTTP_LOGGING_INCLUDE_HEADERS:true}
     include-bodies: ${APP_HTTP_LOGGING_INCLUDE_BODIES:true}
+    full-request-response: ${APP_HTTP_LOGGING_FULL_REQUEST_RESPONSE:true}
     max-body-length: ${APP_HTTP_LOGGING_MAX_BODY_LENGTH:4096}
   cors:
     allowed-origin-patterns:

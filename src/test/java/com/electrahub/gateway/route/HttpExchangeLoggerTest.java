@@ -69,4 +69,22 @@ class HttpExchangeLoggerTest {
 
         assertThat(output).contains("<omitted contentType=application/octet-stream bytes=3>");
     }
+
+    @Test
+    void logsFullTextBodyWhenFullRequestResponseFlagEnabled(CapturedOutput output) {
+        HttpExchangeLogger logger = new HttpExchangeLogger(true, false, false, true, 5);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/auth/api/auth/login");
+        request.setContentType("application/json");
+        request.addHeader("X-Test", "header-value");
+
+        byte[] requestBody = "{\"message\":\"1234567890\"}".getBytes(StandardCharsets.UTF_8);
+
+        logger.logRequest(request, HttpMethod.POST, "/auth/api/auth/login",
+                "http://auth-service:8080/api/auth/login", requestBody);
+
+        assertThat(output).contains("header-value");
+        assertThat(output).contains("1234567890");
+        assertThat(output).doesNotContain("<disabled>");
+        assertThat(output).doesNotContain("<truncated");
+    }
 }

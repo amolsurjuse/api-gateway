@@ -60,35 +60,43 @@ public class HttpExchangeLogger {
     private final boolean enabled;
     private final boolean includeHeaders;
     private final boolean includeBodies;
+    private final boolean fullRequestResponseLogging;
     private final int maxBodyLength;
 
     public HttpExchangeLogger(
             @Value("${app.http-logging.enabled:true}") boolean enabled,
             @Value("${app.http-logging.include-headers:true}") boolean includeHeaders,
             @Value("${app.http-logging.include-bodies:true}") boolean includeBodies,
+            @Value("${app.http-logging.full-request-response:false}") boolean fullRequestResponseLogging,
             @Value("${app.http-logging.max-body-length:4096}") int maxBodyLength
     ) {
         this.enabled = enabled;
         this.includeHeaders = includeHeaders;
         this.includeBodies = includeBodies;
+        this.fullRequestResponseLogging = fullRequestResponseLogging;
         this.maxBodyLength = Math.max(0, maxBodyLength);
     }
+
+    HttpExchangeLogger(boolean enabled, boolean includeHeaders, boolean includeBodies, int maxBodyLength) {
+        this(enabled, includeHeaders, includeBodies, false, maxBodyLength);
+    }
+
 
     public long started() {
         return System.nanoTime();
     }
 
     public void logRequest(HttpServletRequest request, HttpMethod method, String path, String targetUrl, byte[] body) {
-        if (!enabled) {
-            return;
-        }
+//        if (!enabled) {
+//            return;
+//        }
 
         log.info("GW_REQUEST method={} path={} target={} headers={} body={}",
                 method,
                 inboundUrl(request, path),
                 sanitizeUrl(targetUrl),
-                includeHeaders ? sanitizeRequestHeaders(request) : "<disabled>",
-                includeBodies ? summarizeBody(body, request.getContentType()) : "<disabled>");
+                shouldIncludeHeaders() ? sanitizeRequestHeaders(request) : "<disabled>",
+                shouldIncludeBodies() ? summarizeBody(body, request.getContentType()) : "<disabled>");
     }
 
     public void logResponse(
@@ -101,9 +109,9 @@ public class HttpExchangeLogger {
             byte[] body,
             long startedAtNanos
     ) {
-        if (!enabled) {
-            return;
-        }
+//        if (!enabled) {
+//            return;
+//        }
 
         log.info("GW_RESPONSE method={} path={} target={} status={} durationMs={} headers={} body={}",
                 method,
@@ -111,8 +119,8 @@ public class HttpExchangeLogger {
                 sanitizeUrl(targetUrl),
                 status,
                 durationMillis(startedAtNanos),
-                includeHeaders ? sanitizeHeaders(headers) : "<disabled>",
-                includeBodies ? summarizeBody(body, firstHeader(headers, HttpHeaders.CONTENT_TYPE)) : "<disabled>");
+                shouldIncludeHeaders() ? sanitizeHeaders(headers) : "<disabled>",
+                shouldIncludeBodies() ? summarizeBody(body, firstHeader(headers, HttpHeaders.CONTENT_TYPE)) : "<disabled>");
     }
 
     public void logStreamingResponseStarted(
@@ -124,9 +132,9 @@ public class HttpExchangeLogger {
             HttpHeaders headers,
             long startedAtNanos
     ) {
-        if (!enabled) {
-            return;
-        }
+//        if (!enabled) {
+//            return;
+//        }
 
         log.info("GW_STREAM_RESPONSE_STARTED method={} path={} target={} status={} durationMs={} headers={} body=<streaming>",
                 method,
@@ -134,7 +142,7 @@ public class HttpExchangeLogger {
                 sanitizeUrl(targetUrl),
                 status,
                 durationMillis(startedAtNanos),
-                includeHeaders ? sanitizeHeaders(headers) : "<disabled>");
+                shouldIncludeHeaders() ? sanitizeHeaders(headers) : "<disabled>");
     }
 
     public void logFailure(
@@ -145,9 +153,9 @@ public class HttpExchangeLogger {
             Exception exception,
             long startedAtNanos
     ) {
-        if (!enabled) {
-            return;
-        }
+//        if (!enabled) {
+//            return;
+//        }
 
         log.info("GW_FAILURE method={} path={} target={} durationMs={} error={}",
                 method,
@@ -212,10 +220,18 @@ public class HttpExchangeLogger {
 
         String text = new String(body, resolveCharset(contentType));
         text = redactBody(text);
-        if (maxBodyLength > 0 && text.length() > maxBodyLength) {
+        if (!fullRequestResponseLogging && maxBodyLength > 0 && text.length() > maxBodyLength) {
             return text.substring(0, maxBodyLength) + "...<truncated chars=" + text.length() + " bytes=" + body.length + ">";
         }
         return text;
+    }
+
+    private boolean shouldIncludeHeaders() {
+        return fullRequestResponseLogging || includeHeaders;
+    }
+
+    private boolean shouldIncludeBodies() {
+        return fullRequestResponseLogging || includeBodies;
     }
 
     private boolean isTextLike(String contentType) {

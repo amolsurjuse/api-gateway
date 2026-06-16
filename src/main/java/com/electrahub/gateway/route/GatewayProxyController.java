@@ -69,6 +69,9 @@ public class GatewayProxyController {
             "connection", "content-length", "date", "expect", "from",
             "host", "upgrade", "via", "warning"
     );
+    private static final String LEGACY_AUTH_TERMS_PREFIX = "/auth/api/terms";
+    private static final String TERMS_ROUTE_PREFIX = "terms";
+    private static final String TERMS_DOWNSTREAM_PREFIX = "/api/v1/terms";
 
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
@@ -123,8 +126,8 @@ public class GatewayProxyController {
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
         long startedAtNanos = httpExchangeLogger.started();
 
-        // Extract the service prefix (first path segment)
-        String prefix = extractPrefix(path);
+        RouteTarget routeTarget = resolveRouteTarget(path);
+        String prefix = routeTarget == null ? null : routeTarget.prefix();
         if (prefix == null) {
             byte[] responseBody = "{\"error\":\"No route matched\"}".getBytes();
             httpExchangeLogger.logRequest(request, method, path, null, body);
@@ -145,7 +148,7 @@ public class GatewayProxyController {
         }
 
         // Strip the prefix from the path: /user/api/v1/users → /api/v1/users
-        String downstreamPath = path.substring(prefix.length() + 1); // +1 for leading /
+        String downstreamPath = routeTarget.downstreamPath();
         String resolvedTargetUrl = backendUrl + downstreamPath;
         if (query != null && !query.isEmpty()) {
             resolvedTargetUrl += "?" + query;
@@ -338,6 +341,26 @@ public class GatewayProxyController {
         String trimmed = path.substring(1);
         int slashIndex = trimmed.indexOf('/');
         return slashIndex > 0 ? trimmed.substring(0, slashIndex) : trimmed;
+    }
+
+    private RouteTarget resolveRouteTarget(String path) {
+        if (path == null || path.length() < 2) {
+            return null;
+        }
+
+        if (path.equals(LEGACY_AUTH_TERMS_PREFIX) || path.startsWith(LEGACY_AUTH_TERMS_PREFIX + "/")) {
+            String suffix = path.substring(LEGACY_AUTH_TERMS_PREFIX.length());
+            return new RouteTarget(TERMS_ROUTE_PREFIX, TERMS_DOWNSTREAM_PREFIX + suffix);
+        }
+
+        String prefix = extractPrefix(path);
+        if (prefix == null) {
+            return null;
+        }
+        return new RouteTarget(prefix, path.substring(prefix.length() + 1));
+    }
+
+    private record RouteTarget(String prefix, String downstreamPath) {
     }
 
     /**

@@ -1,15 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="api-gateway"/>
-    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] traceId=%X{traceId:-} spanId=%X{spanId:-} %logger{36} - %msg%n"/>
+    <springProperty scope="context" name="PID" source="spring.application.pid" defaultValue="???"/>
 
+    <!-- LOG_FILE_ENABLED defaults to false — containers/pods log to stdout only.
+         Set LOG_FILE_ENABLED=true ONLY for bare-metal / VM deployments with a writable log directory.
+         Never set this to true in Kubernetes pod specs — it will fail because no log dir exists. -->
+    <property name="LOG_FILE_ENABLED" value="${LOG_FILE_ENABLED:-false}"/>
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
+
+    <!-- ElectraHub canonical log pattern — do NOT change field order or names -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level ${PID} --- [${APP_NAME}] [%thread] traceId=%X{traceId:-} spanId=%X{spanId:-} %logger{36} : %msg%n%ex"/>
+
+    <!-- Console appender — always active (stdout for Kubernetes log collection) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 
+    <!-- Rolling file appender — only active when LOG_FILE_ENABLED=true -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/${APP_NAME}.log</file>
         <encoder>
@@ -25,7 +36,11 @@
 
     <root level="${LOGGING_LEVEL_ROOT:-INFO}">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
+        <!-- Conditional file appender — requires janino on classpath -->
+        <if condition='property("LOG_FILE_ENABLED").equals("true")'>
+            <then>
+                <appender-ref ref="FILE"/>
+            </then>
+        </if>
     </root>
 </configuration>
-

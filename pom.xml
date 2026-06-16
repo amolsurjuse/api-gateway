@@ -112,6 +112,12 @@
 			<artifactId>opentelemetry-exporter-otlp</artifactId>
 		</dependency>
 
+		<!-- Janino — required for conditional blocks in logback-spring.xml -->
+		<dependency>
+			<groupId>org.codehaus.janino</groupId>
+			<artifactId>janino</artifactId>
+		</dependency>
+
     </dependencies>
 
 	<build>

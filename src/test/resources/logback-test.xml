@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level traceId=%X{traceId:-} spanId=%X{spanId:-} %logger{36} - %msg%n"/>
+    <!-- Mirrors the ElectraHub canonical pattern for consistent test output -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] traceId=%X{traceId:-} spanId=%X{spanId:-} %logger{36} : %msg%n%ex"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -12,4 +14,3 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>
-

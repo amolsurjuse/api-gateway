@@ -89,9 +89,9 @@ public class HttpExchangeLogger {
     }
 
     public void logRequest(HttpServletRequest request, HttpMethod method, String path, String targetUrl, byte[] body) {
-//        if (!enabled) {
-//            return;
-//        }
+        if (!enabled) {
+            return;
+        }
 
         log.info("GW_REQUEST method={} path={} target={} headers={} body={}",
                 method,
@@ -111,9 +111,9 @@ public class HttpExchangeLogger {
             byte[] body,
             long startedAtNanos
     ) {
-//        if (!enabled) {
-//            return;
-//        }
+        if (!enabled) {
+            return;
+        }
 
         log.info("GW_RESPONSE method={} path={} target={} status={} durationMs={} headers={} body={}",
                 method,
@@ -134,9 +134,9 @@ public class HttpExchangeLogger {
             HttpHeaders headers,
             long startedAtNanos
     ) {
-//        if (!enabled) {
-//            return;
-//        }
+        if (!enabled) {
+            return;
+        }
 
         log.info("GW_STREAM_RESPONSE_STARTED method={} path={} target={} status={} durationMs={} headers={} body=<streaming>",
                 method,
@@ -155,16 +155,17 @@ public class HttpExchangeLogger {
             Exception exception,
             long startedAtNanos
     ) {
-//        if (!enabled) {
-//            return;
-//        }
+        if (!enabled) {
+            return;
+        }
 
-        log.info("GW_FAILURE method={} path={} target={} durationMs={} error={}",
+        log.error("GW_FAILURE method={} path={} target={} durationMs={} error={}",
                 method,
                 inboundUrl(request, path),
                 sanitizeUrl(targetUrl),
                 durationMillis(startedAtNanos),
-                exception.getMessage());
+                exception.getMessage(),
+                exception);
     }
 
     private long durationMillis(long startedAtNanos) {

@@ -23,8 +23,6 @@ logging:
     root: ${LOGGING_LEVEL_ROOT:INFO}
     com.electrahub.gateway: ${LOGGING_LEVEL_COM_ELECTRAHUB_GATEWAY:INFO}
     org.springframework: WARN
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
 
 management:
   endpoints:
@@ -39,6 +37,9 @@ management:
   tracing:
     sampling:
       probability: ${API_GATEWAY_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 app:
   security:

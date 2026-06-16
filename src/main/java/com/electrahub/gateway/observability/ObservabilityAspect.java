@@ -105,8 +105,7 @@ public class ObservabilityAspect {
                     .register(meterRegistry)
                     .increment();
 
-            LOGGER.info("Failed {}.{} in {} ms: {}", className, methodName, durationMs, ex.toString());
-            LOGGER.debug("Failure stack trace for {}.{}", className, methodName, ex);
+            LOGGER.error("Failed {}.{} in {} ms: {}", className, methodName, durationMs, ex.toString(), ex);
             throw ex;
         }
     }

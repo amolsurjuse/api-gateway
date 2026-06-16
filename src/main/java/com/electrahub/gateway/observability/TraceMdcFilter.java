@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -18,10 +19,10 @@ import java.io.IOException;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class TraceMdcFilter extends OncePerRequestFilter {
 
-    private final Tracer tracer;
+    private final ObjectProvider<Tracer> tracerProvider;
 
-    public TraceMdcFilter(Tracer tracer) {
-        this.tracer = tracer;
+    public TraceMdcFilter(ObjectProvider<Tracer> tracerProvider) {
+        this.tracerProvider = tracerProvider;
     }
 
     @Override
@@ -29,7 +30,8 @@ public class TraceMdcFilter extends OncePerRequestFilter {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
-        Span span = tracer.currentSpan();
+        Tracer tracer = tracerProvider.getIfAvailable();
+        Span span = tracer != null ? tracer.currentSpan() : null;
         if (span != null) {
             MDC.put("traceId", span.context().traceId());
             MDC.put("spanId", span.context().spanId());

@@ -14,6 +14,7 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,9 +60,14 @@ class ApiPolicyAuthorizationManagerTest {
         ));
 
         var manager = manager(properties);
-        var decision = authorize(manager, "GET", "/unknown/path", () -> authenticationWithRoles("USER"));
+        var authenticationResolved = new AtomicBoolean(false);
+        var decision = authorize(manager, "GET", "/unknown/path", () -> {
+            authenticationResolved.set(true);
+            return authenticationWithRoles("USER");
+        });
 
         assertFalse(decision.isGranted());
+        assertTrue(authenticationResolved.get());
     }
 
     /**
@@ -98,9 +104,14 @@ class ApiPolicyAuthorizationManagerTest {
         ));
 
         var manager = manager(properties);
-        var decision = authorize(manager, "GET", "/user/api/v1/admin/users", () -> authenticationWithRoles("SYSTEM_ADMIN"));
+        var authenticationResolved = new AtomicBoolean(false);
+        var decision = authorize(manager, "GET", "/user/api/v1/admin/users", () -> {
+            authenticationResolved.set(true);
+            return authenticationWithRoles("SYSTEM_ADMIN");
+        });
 
         assertFalse(decision.isGranted());
+        assertTrue(authenticationResolved.get());
     }
 
     private static AuthorizationDecision authorize(

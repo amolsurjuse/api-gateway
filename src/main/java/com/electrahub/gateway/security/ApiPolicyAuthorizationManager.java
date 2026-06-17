@@ -67,6 +67,9 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
 
             matchedAnyRule = true;
             if (rule.effect() == RbacProperties.Decision.DENY) {
+                if (authentication == null) {
+                    authentication = authenticationSupplier.get();
+                }
                 if (log.isDebugEnabled()) {
                     log.debug("RBAC decision: method={} path={} principal={} rule={} granted=false reason=explicit-deny",
                             method, path, principal(authentication), rule.name());
@@ -92,6 +95,9 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         }
 
         boolean granted = currentPolicy.defaultDecision() == RbacProperties.Decision.ALLOW;
+        if (!granted && authentication == null) {
+            authentication = authenticationSupplier.get();
+        }
         if (log.isDebugEnabled()) {
             log.debug("RBAC decision: method={} path={} principal={} rule=<default> granted={}",
                     method, path, principal(authentication), granted);

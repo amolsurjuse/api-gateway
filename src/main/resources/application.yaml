@@ -144,6 +144,11 @@ app:
         path-pattern: "/notifications/api/v1/public/contact-inquiries"
         effect: ALLOW
         allow-anonymous: true
+      - name: ai-support-service
+        methods: [ "*" ]
+        path-pattern: "/ai/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
       - name: terms-authenticated
         methods: [ "GET", "POST" ]
         path-pattern: "/terms/api/v1/terms/**"
@@ -323,6 +328,7 @@ gateway:
     session: ${GATEWAY_ROUTES_SESSION:${GATEWAY_ROUTE_SESSION:http://session-service:8083}}
     station: ${GATEWAY_ROUTES_STATION:${GATEWAY_ROUTE_STATION:http://station-management-service:8081}}
     notifications: ${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}
+    ai: ${GATEWAY_ROUTES_AI:${GATEWAY_ROUTE_AI:http://ai-support-service:8094}}
 
 grpc:
   client:

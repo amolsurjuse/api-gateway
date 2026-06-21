@@ -70,6 +70,9 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 if (authentication == null) {
                     authentication = authenticationSupplier.get();
                 }
+                if (!denyApplies(rule, authentication, currentPolicy.roleHierarchy())) {
+                    continue;
+                }
                 if (log.isDebugEnabled()) {
                     log.debug("RBAC decision: method={} path={} principal={} rule={} granted=false reason=explicit-deny",
                             method, path, principal(authentication), rule.name());
@@ -103,6 +106,17 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                     method, path, principal(authentication), granted);
         }
         return new AuthorizationDecision(granted);
+    }
+
+    private boolean denyApplies(CompiledRule rule, Authentication authentication, RoleHierarchy roleHierarchy) {
+        if (rule.requiredRoles().isEmpty()) {
+            return true;
+        }
+        if (isAnonymous(authentication)) {
+            return false;
+        }
+        Set<String> effectiveRoles = extractRoles(authentication, roleHierarchy);
+        return rule.requiredRoles().stream().anyMatch(effectiveRoles::contains);
     }
 
     /**

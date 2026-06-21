@@ -114,6 +114,38 @@ class ApiPolicyAuthorizationManagerTest {
         assertTrue(authenticationResolved.get());
     }
 
+    @Test
+    void roleScopedDenyBlocksReadOnlyAdminWrites() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                denyRule("readonly-admin-write-deny", List.of("POST", "PUT", "PATCH", "DELETE"), "/charger/api/v1/admin/**", List.of("ADMIN_READ_ONLY")),
+                rule("charger-admin-readonly", List.of("GET"), "/charger/api/v1/admin/**", false, List.of("ADMIN_READ_ONLY")),
+                rule("charger-admin-service", List.of("*"), "/charger/api/v1/admin/**", false, List.of("SYSTEM_ADMIN"))
+        ));
+
+        var manager = manager(properties);
+
+        assertFalse(authorize(manager, "POST", "/charger/api/v1/admin/enterprises",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertTrue(authorize(manager, "GET", "/charger/api/v1/admin/enterprises",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+    }
+
+    @Test
+    void roleScopedDenyDoesNotBlockSystemAdminWrites() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                denyRule("readonly-admin-write-deny", List.of("POST", "PUT", "PATCH", "DELETE"), "/charger/api/v1/admin/**", List.of("ADMIN_READ_ONLY")),
+                rule("charger-admin-service", List.of("*"), "/charger/api/v1/admin/**", false, List.of("SYSTEM_ADMIN"))
+        ));
+
+        var manager = manager(properties);
+        var decision = authorize(manager, "POST", "/charger/api/v1/admin/enterprises",
+                () -> authenticationWithRoles("SYSTEM_ADMIN", "USER"));
+
+        assertTrue(decision.isGranted());
+    }
+
     private static AuthorizationDecision authorize(
             ApiPolicyAuthorizationManager manager,
             String method,
@@ -170,13 +202,17 @@ class ApiPolicyAuthorizationManagerTest {
      * @return result produced by denyRule.
      */
     private static RbacProperties.Rule denyRule(String name, List<String> methods, String pathPattern) {
+        return denyRule(name, methods, pathPattern, List.of());
+    }
+
+    private static RbacProperties.Rule denyRule(String name, List<String> methods, String pathPattern, List<String> roles) {
         var rule = new RbacProperties.Rule();
         rule.setName(name);
         rule.setMethods(methods);
         rule.setPathPattern(pathPattern);
         rule.setEffect(RbacProperties.Decision.DENY);
         rule.setAllowAnonymous(false);
-        rule.setRequiredRoles(List.of());
+        rule.setRequiredRoles(roles);
         return rule;
     }
 

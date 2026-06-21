@@ -154,6 +154,56 @@ app:
         path-pattern: "/terms/api/v1/terms/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: readonly-admin-user-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/user/api/v1/admin/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-terms-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/admin/api/v1/terms/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-terms-root-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/admin/api/v1/terms"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-billing-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/billing/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-charger-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/charger/api/v1/admin/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-subscription-admin-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/subscription/api/v1/admin/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-subscription-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/subscription/api/v1/subscriptions/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-pricing-plans-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/pricing/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-station-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/station/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-charger-management-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/charger-management/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
       - name: terms-admin
         methods: [ "*" ]
         path-pattern: "/admin/api/v1/terms/**"

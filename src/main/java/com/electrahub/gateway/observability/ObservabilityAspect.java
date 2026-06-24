@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Aspect
@@ -21,6 +22,11 @@ public class ObservabilityAspect {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ObservabilityAspect.class);
     private static final int MAX_LOG_VALUE_LENGTH = 300;
+    private static final String REDACTED = "***";
+    private static final Pattern SENSITIVE_NAME = Pattern.compile(
+            "(?i).*(authorization|credential|password|secret|token|api[-_]?key|apikey|internalapikey|refresh).*");
+    private static final Pattern SENSITIVE_TEXT = Pattern.compile(
+            "(?i)(authorization|password|secret|token|api[-_]?key|apikey|refresh)\\s*[:=]\\s*[^,}\\]\\s]+");
 
     private final MeterRegistry meterRegistry;
 
@@ -56,6 +62,7 @@ public class ObservabilityAspect {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String className = signature.getDeclaringType().getSimpleName();
         String methodName = signature.getName();
+        boolean sensitiveOperation = isSensitiveName(className) || isSensitiveName(methodName);
         long startedAt = System.nanoTime();
 
         Counter.builder("electrahub.method.invocations")
@@ -67,7 +74,8 @@ public class ObservabilityAspect {
 
         LOGGER.info("Starting {}.{}", className, methodName);
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Arguments for {}.{} -> {}", className, methodName, formatArgs(joinPoint.getArgs()));
+            LOGGER.debug("Arguments for {}.{} -> {}", className, methodName,
+                    formatArgs(joinPoint.getArgs(), sensitiveOperation));
         }
 
         Timer.Sample sample = Timer.start(meterRegistry);
@@ -85,7 +93,8 @@ public class ObservabilityAspect {
 
             LOGGER.info("Completed {}.{} in {} ms", className, methodName, durationMs);
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Result for {}.{} -> {}", className, methodName, abbreviate(result));
+                LOGGER.debug("Result for {}.{} -> {}", className, methodName,
+                        abbreviate(result, sensitiveOperation));
             }
             return result;
         } catch (Throwable ex) {
@@ -118,12 +127,12 @@ public class ObservabilityAspect {
      * @param args input consumed by formatArgs.
      * @return result produced by formatArgs.
      */
-    private String formatArgs(Object[] args) {
+    private String formatArgs(Object[] args, boolean sensitiveOperation) {
         if (args == null || args.length == 0) {
             return "[]";
         }
         return Arrays.stream(args)
-                .map(this::abbreviate)
+                .map(arg -> abbreviate(arg, sensitiveOperation))
                 .collect(Collectors.joining(", ", "[", "]"));
     }
 
@@ -135,9 +144,12 @@ public class ObservabilityAspect {
      * @param value input consumed by abbreviate.
      * @return result produced by abbreviate.
      */
-    private String abbreviate(Object value) {
+    private String abbreviate(Object value, boolean sensitiveOperation) {
         if (value == null) {
             return "null";
+        }
+        if (sensitiveOperation) {
+            return REDACTED;
         }
         String text;
         try {
@@ -145,9 +157,25 @@ public class ObservabilityAspect {
         } catch (Exception ex) {
             return value.getClass().getSimpleName();
         }
-        if (text.length() <= MAX_LOG_VALUE_LENGTH) {
-            return text;
+        String redacted = redactSensitiveText(text);
+        if (redacted.length() <= MAX_LOG_VALUE_LENGTH) {
+            return redacted;
         }
-        return text.substring(0, MAX_LOG_VALUE_LENGTH) + "...";
+        return redacted.substring(0, MAX_LOG_VALUE_LENGTH) + "...";
+    }
+
+    private boolean isSensitiveName(String value) {
+        return value != null && SENSITIVE_NAME.matcher(value).matches();
+    }
+
+    private String redactSensitiveText(String text) {
+        return SENSITIVE_TEXT.matcher(text).replaceAll(match -> {
+            String token = match.group();
+            int separatorIndex = Math.max(token.lastIndexOf(':'), token.lastIndexOf('='));
+            if (separatorIndex < 0) {
+                return REDACTED;
+            }
+            return token.substring(0, separatorIndex + 1) + REDACTED;
+        });
     }
 }

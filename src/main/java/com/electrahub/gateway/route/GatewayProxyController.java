@@ -1,6 +1,7 @@
 package com.electrahub.gateway.route;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -120,7 +121,8 @@ public class GatewayProxyController {
     }
 
     @RequestMapping("/**")
-    public ResponseEntity<?> proxy(HttpServletRequest request,
+    public Object proxy(HttpServletRequest request,
+                                   HttpServletResponse servletResponse,
                                    /**
                                     * Executes request body for `GatewayProxyController`.
                                     *
@@ -174,7 +176,7 @@ public class GatewayProxyController {
         // client and return a StreamingResponseBody so events are flushed
         // chunk-by-chunk to the client.
         if (acceptsEventStream(request)) {
-            return proxyStreaming(request, targetUrl, method, body, path, startedAtNanos);
+            return proxyStreaming(request, servletResponse, targetUrl, method, body, path, startedAtNanos);
         }
 
         try {
@@ -251,12 +253,13 @@ public class GatewayProxyController {
      * via Spring MVC's {@link StreamingResponseBody}. Each chunk is flushed
      * so events reach the client immediately.
      */
-    private ResponseEntity<StreamingResponseBody> proxyStreaming(HttpServletRequest request,
-                                                                 String targetUrl,
-                                                                 HttpMethod method,
-                                                                 byte[] body,
-                                                                 String path,
-                                                                 long startedAtNanos) {
+    private StreamingResponseBody proxyStreaming(HttpServletRequest request,
+                                                 HttpServletResponse servletResponse,
+                                                 String targetUrl,
+                                                 HttpMethod method,
+                                                 byte[] body,
+                                                 String path,
+                                                 long startedAtNanos) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(targetUrl))
@@ -309,10 +312,12 @@ public class GatewayProxyController {
             // proxies (e.g., nginx) to flush chunks immediately.
             responseHeaders.setCacheControl("no-cache");
             responseHeaders.set("X-Accel-Buffering", "no");
+            servletResponse.setStatus(downstream.statusCode());
+            responseHeaders.forEach((name, values) -> values.forEach(value -> servletResponse.addHeader(name, value)));
             httpExchangeLogger.logStreamingResponseStarted(request, method, path, targetUrl,
                     downstream.statusCode(), responseHeaders, startedAtNanos);
 
-            StreamingResponseBody streamingBody = outputStream -> {
+            return outputStream -> {
                 try (InputStream in = downstream.body()) {
                     byte[] buffer = new byte[1024];
                     int read;
@@ -328,17 +333,13 @@ public class GatewayProxyController {
                 }
             };
 
-            return new ResponseEntity<>(streamingBody, responseHeaders,
-                    HttpStatusCode.valueOf(downstream.statusCode()));
-
         } catch (Exception ex) {
             httpExchangeLogger.logFailure(request, method, path, targetUrl, ex, startedAtNanos);
             log.error("Streaming proxy error for {} {}: {}", method, targetUrl, ex.getMessage());
-            HttpHeaders errorHeaders = new HttpHeaders();
-            errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+            servletResponse.setStatus(HttpStatus.BAD_GATEWAY.value());
+            servletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
             byte[] errorBody = ("{\"error\":\"Streaming gateway error: " + ex.getMessage() + "\"}").getBytes();
-            StreamingResponseBody errorStream = out -> out.write(errorBody);
-            return new ResponseEntity<>(errorStream, errorHeaders, HttpStatus.BAD_GATEWAY);
+            return out -> out.write(errorBody);
         }
     }
 

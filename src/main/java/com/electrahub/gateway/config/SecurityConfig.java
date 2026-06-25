@@ -3,6 +3,7 @@ package com.electrahub.gateway.config;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import com.electrahub.gateway.security.ApiPolicyAuthorizationManager;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -88,6 +89,7 @@ public class SecurityConfig {
                                 response.setStatus(HttpStatus.FORBIDDEN.value()))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/internal/rbac/cache/**").permitAll()
                         .anyRequest().access(apiPolicyAuthorizationManager)
                 )

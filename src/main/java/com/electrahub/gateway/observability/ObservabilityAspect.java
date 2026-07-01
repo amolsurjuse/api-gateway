@@ -114,7 +114,11 @@ public class ObservabilityAspect {
                     .register(meterRegistry)
                     .increment();
 
-            LOGGER.error("Failed {}.{} in {} ms: {}", className, methodName, durationMs, ex.toString(), ex);
+            if (isExpectedSecurityRejection(ex)) {
+                LOGGER.debug("Rejected {}.{} in {} ms: {}", className, methodName, durationMs, ex.toString());
+            } else {
+                LOGGER.error("Failed {}.{} in {} ms: {}", className, methodName, durationMs, ex.toString(), ex);
+            }
             throw ex;
         }
     }
@@ -177,5 +181,13 @@ public class ObservabilityAspect {
             }
             return token.substring(0, separatorIndex + 1) + REDACTED;
         });
+    }
+
+    private boolean isExpectedSecurityRejection(Throwable ex) {
+        String name = ex.getClass().getName();
+        return name.equals("io.jsonwebtoken.ExpiredJwtException")
+                || name.equals("io.jsonwebtoken.security.SignatureException")
+                || name.equals("io.jsonwebtoken.MalformedJwtException")
+                || name.equals("io.jsonwebtoken.UnsupportedJwtException");
     }
 }

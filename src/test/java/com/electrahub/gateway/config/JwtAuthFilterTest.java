@@ -17,6 +17,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class JwtAuthFilterTest {
@@ -58,6 +60,21 @@ class JwtAuthFilterTest {
         assertThat(response.getHeader(HttpHeaders.WWW_AUTHENTICATE)).contains("invalid_token");
         assertThat(chain.getRequest()).isNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void skipsJwtValidationForRefreshEvenWhenExpiredAuthorizationHeaderIsPresent() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/auth/api/auth/refresh");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer expired-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(chain.getRequest()).isSameAs(request);
+        assertThat(response.getStatus()).isEqualTo(MockHttpServletResponse.SC_OK);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(jwtService, never()).parseAndValidate("expired-token");
     }
 
     @Test

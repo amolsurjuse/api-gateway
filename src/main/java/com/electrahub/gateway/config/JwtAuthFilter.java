@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -30,6 +31,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final TokenDenylistService denylistService;
     private final TokenVersionService tokenVersionService;
     private static final String WWW_AUTHENTICATE_BEARER_INVALID_TOKEN = "Bearer error=\"invalid_token\"";
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
+            "/auth/api/auth/login",
+            "/auth/api/auth/register",
+            "/auth/api/auth/refresh",
+            "/auth/api/auth/forgot-password",
+            "/auth/api/auth/reset-password",
+            "/auth/api/auth/email-verification/verify",
+            "/auth/api/auth/email-verification/resend",
+            "/auth/api/auth/oauth/google",
+            "/auth/api/auth/oauth/facebook"
+    );
 
     public JwtAuthFilter(
             JwtService jwtService,
@@ -39,6 +51,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
         this.denylistService = denylistService;
         this.tokenVersionService = tokenVersionService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return PUBLIC_AUTH_PATHS.contains(path);
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.electrahub.gateway.route;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.electrahub.gateway.config.HttpClientConfig.GatewayHttpClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -18,7 +19,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
@@ -96,9 +96,7 @@ public class GatewayProxyController {
      * client gives us an HttpResponse&lt;InputStream&gt; whose body remains
      * readable until we close it.
      */
-    private final HttpClient streamingHttpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final HttpClient streamingHttpClient;
 
     /**
      * Executes gateway proxy controller for `GatewayProxyController`.
@@ -111,13 +109,17 @@ public class GatewayProxyController {
     public GatewayProxyController(
             RouteRegistry routeRegistry,
             RestClient.Builder restClientBuilder,
-            HttpExchangeLogger httpExchangeLogger
+            HttpExchangeLogger httpExchangeLogger,
+            GatewayHttpClientProperties httpClientProperties
     ) {
         log.info(" Entering GatewayProxyController#GatewayProxyController");
         log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
         this.httpExchangeLogger = httpExchangeLogger;
+        this.streamingHttpClient = HttpClient.newBuilder()
+                .connectTimeout(httpClientProperties.streamingConnectTimeout())
+                .build();
     }
 
     @RequestMapping("/**")

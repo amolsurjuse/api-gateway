@@ -363,6 +363,10 @@ app:
         enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:true}
 
 gateway:
+  http-client:
+    connect-timeout: ${GATEWAY_HTTP_CLIENT_CONNECT_TIMEOUT:3s}
+    read-timeout: ${GATEWAY_HTTP_CLIENT_READ_TIMEOUT:12s}
+    streaming-connect-timeout: ${GATEWAY_HTTP_CLIENT_STREAMING_CONNECT_TIMEOUT:5s}
   routes:
     auth: ${GATEWAY_ROUTES_AUTH:${GATEWAY_ROUTE_AUTH:http://auth-service:8080}}
     user: ${GATEWAY_ROUTES_USER:${GATEWAY_ROUTE_USER:http://user-service:8082}}

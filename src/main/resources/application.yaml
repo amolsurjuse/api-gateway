@@ -334,6 +334,11 @@ app:
         path-pattern: "/ws/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: session-admin-read
+        methods: [ "GET" ]
+        path-pattern: "/session/api/v1/sessions/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
       - name: session-service
         methods: [ "*" ]
         path-pattern: "/session/**"

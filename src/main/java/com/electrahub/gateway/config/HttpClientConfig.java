@@ -6,9 +6,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 
 @Configuration
@@ -28,19 +29,13 @@ public class HttpClientConfig {
     RestClient.Builder restClientBuilder(GatewayHttpClientProperties properties) {
         LOGGER.info(" Entering HttpClientConfig#restClientBuilder");
         LOGGER.debug(" Entering HttpClientConfig#restClientBuilder with debug context");
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(toMillis(properties.connectTimeout()));
-        requestFactory.setReadTimeout(toMillis(properties.readTimeout()));
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(properties.connectTimeout())
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(properties.readTimeout());
         return RestClient.builder()
                 .requestFactory(requestFactory);
-    }
-
-    private int toMillis(Duration duration) {
-        long millis = duration.toMillis();
-        if (millis > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        return (int) millis;
     }
 
     @ConfigurationProperties(prefix = "gateway.http-client")

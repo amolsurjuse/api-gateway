@@ -144,6 +144,16 @@ app:
         path-pattern: "/notifications/api/v1/public/contact-inquiries"
         effect: ALLOW
         allow-anonymous: true
+      - name: notification-admin-inbox
+        methods: [ "GET", "PATCH" ]
+        path-pattern: "/notifications/api/v1/inbox/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: notification-admin-inbox-root
+        methods: [ "GET" ]
+        path-pattern: "/notifications/api/v1/inbox"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
       - name: ai-support-service
         methods: [ "*" ]
         path-pattern: "/ai/**"

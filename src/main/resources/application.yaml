@@ -144,6 +144,26 @@ app:
         path-pattern: "/notifications/api/v1/public/contact-inquiries"
         effect: ALLOW
         allow-anonymous: true
+      - name: notification-push-devices
+        methods: [ "POST", "DELETE" ]
+        path-pattern: "/notifications/api/v1/push/devices/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: notification-push-devices-root
+        methods: [ "POST" ]
+        path-pattern: "/notifications/api/v1/push/devices"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: notification-push-devices-legacy
+        methods: [ "POST", "DELETE" ]
+        path-pattern: "/notification/api/v1/push/devices/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: notification-push-devices-legacy-root
+        methods: [ "POST" ]
+        path-pattern: "/notification/api/v1/push/devices"
+        effect: ALLOW
+        required-roles: [ "USER" ]
       - name: notification-admin-inbox
         methods: [ "GET", "PATCH" ]
         path-pattern: "/notifications/api/v1/inbox/**"
@@ -378,6 +398,8 @@ app:
         enabled: ${APP_GRPC_FORWARDERS_PRICING_ENABLED:true}
 
 gateway:
+  identity:
+    default-tenant: ${GATEWAY_IDENTITY_DEFAULT_TENANT:electrahub}
   http-client:
     connect-timeout: ${GATEWAY_HTTP_CLIENT_CONNECT_TIMEOUT:3s}
     read-timeout: ${GATEWAY_HTTP_CLIENT_READ_TIMEOUT:12s}
@@ -396,6 +418,7 @@ gateway:
     admin: ${GATEWAY_ROUTES_ADMIN:${GATEWAY_ROUTE_ADMIN:${GATEWAY_ROUTE_USER:http://user-service:8082}}}
     session: ${GATEWAY_ROUTES_SESSION:${GATEWAY_ROUTE_SESSION:http://session-service:8083}}
     station: ${GATEWAY_ROUTES_STATION:${GATEWAY_ROUTE_STATION:http://station-management-service:8081}}
+    notification: ${GATEWAY_ROUTES_NOTIFICATION:${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}}
     notifications: ${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}
     ai: ${GATEWAY_ROUTES_AI:${GATEWAY_ROUTE_AI:http://ai-support-service:8094}}
 

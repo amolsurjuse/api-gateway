@@ -6,6 +6,7 @@ import com.electrahub.gateway.config.HttpClientConfig.GatewayHttpClientPropertie
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -80,6 +81,12 @@ public class GatewayProxyController {
             "connection", "content-length", "date", "expect", "from",
             "host", "upgrade", "via", "warning"
     );
+    private static final String AUTHENTICATED_USER_HEADER = "X-ElectraHub-User-Id";
+    private static final String AUTHENTICATED_TENANT_HEADER = "X-ElectraHub-Tenant-Id";
+    private static final Set<String> TRUSTED_IDENTITY_HEADERS = Set.of(
+            AUTHENTICATED_USER_HEADER.toLowerCase(Locale.ROOT),
+            AUTHENTICATED_TENANT_HEADER.toLowerCase(Locale.ROOT)
+    );
     private static final String LEGACY_AUTH_TERMS_PREFIX = "/auth/api/terms";
     private static final String TERMS_ROUTE_PREFIX = "terms";
     private static final String TERMS_DOWNSTREAM_PREFIX = "/api/v1/terms";
@@ -87,6 +94,7 @@ public class GatewayProxyController {
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
     private final HttpExchangeLogger httpExchangeLogger;
+    private final String defaultTenant;
 
     /**
      * Dedicated HTTP client for streaming responses (SSE / chunked).
@@ -110,13 +118,15 @@ public class GatewayProxyController {
             RouteRegistry routeRegistry,
             RestClient.Builder restClientBuilder,
             HttpExchangeLogger httpExchangeLogger,
-            GatewayHttpClientProperties httpClientProperties
+            GatewayHttpClientProperties httpClientProperties,
+            @Value("${gateway.identity.default-tenant:electrahub}") String defaultTenant
     ) {
         log.info(" Entering GatewayProxyController#GatewayProxyController");
         log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
         this.httpExchangeLogger = httpExchangeLogger;
+        this.defaultTenant = defaultTenant;
         this.streamingHttpClient = HttpClient.newBuilder()
                 .connectTimeout(httpClientProperties.streamingConnectTimeout())
                 .build();
@@ -276,7 +286,8 @@ public class GatewayProxyController {
                 String lower = name.toLowerCase(Locale.ROOT);
                 if (HOP_BY_HOP_HEADERS.contains(lower)
                         || JDK_HTTP_RESTRICTED_HEADERS.contains(lower)
-                        || GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lower)) {
+                        || GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lower)
+                        || TRUSTED_IDENTITY_HEADERS.contains(lower)) {
                     continue;
                 }
                 Enumeration<String> values = request.getHeaders(name);
@@ -288,6 +299,7 @@ public class GatewayProxyController {
                     }
                 }
             }
+            addTrustedIdentityHeaders(request, builder);
 
             HttpRequest.BodyPublisher publisher = (body == null || body.length == 0)
                     ? HttpRequest.BodyPublishers.noBody()
@@ -387,12 +399,41 @@ public class GatewayProxyController {
             String name = headerNames.nextElement();
             String lowerName = name.toLowerCase(Locale.ROOT);
             if (!HOP_BY_HOP_HEADERS.contains(lowerName)
-                    && !GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lowerName)) {
+                    && !GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lowerName)
+                    && !TRUSTED_IDENTITY_HEADERS.contains(lowerName)) {
                 Enumeration<String> values = request.getHeaders(name);
                 while (values.hasMoreElements()) {
                     headers.add(name, values.nextElement());
                 }
             }
         }
+        addTrustedIdentityHeaders(request, headers);
+    }
+
+    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpHeaders headers) {
+        String userId = authenticatedUserId(request);
+        if (userId == null) {
+            return;
+        }
+        headers.set(AUTHENTICATED_USER_HEADER, userId);
+        headers.set(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+    }
+
+    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpRequest.Builder builder) {
+        String userId = authenticatedUserId(request);
+        if (userId == null) {
+            return;
+        }
+        builder.header(AUTHENTICATED_USER_HEADER, userId);
+        builder.header(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+    }
+
+    private String authenticatedUserId(HttpServletRequest request) {
+        Object value = request.getAttribute("uid");
+        if (value == null) {
+            return null;
+        }
+        String userId = value.toString().trim();
+        return userId.isEmpty() ? null : userId;
     }
 }

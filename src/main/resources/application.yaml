@@ -164,6 +164,16 @@ app:
         path-pattern: "/notification/api/v1/push/devices"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: notification-driver-inbox
+        methods: [ "GET", "PATCH" ]
+        path-pattern: "/notifications/api/v1/me/inbox/**"
+        effect: ALLOW
+        required-roles: [ "USER" ]
+      - name: notification-driver-inbox-root
+        methods: [ "GET" ]
+        path-pattern: "/notifications/api/v1/me/inbox"
+        effect: ALLOW
+        required-roles: [ "USER" ]
       - name: notification-admin-inbox
         methods: [ "GET", "PATCH" ]
         path-pattern: "/notifications/api/v1/inbox/**"

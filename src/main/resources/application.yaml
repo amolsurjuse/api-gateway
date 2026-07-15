@@ -199,6 +199,26 @@ app:
         path-pattern: "/user/api/v1/admin/**"
         effect: DENY
         required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-admin-users-root-deny
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/admin/users"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-admin-users-deny
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/admin/users/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-users-root-deny
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/users"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-users-deny
+        methods: [ "*" ]
+        path-pattern: "/user/api/v1/users/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
       - name: readonly-admin-terms-write-deny
         methods: [ "POST", "PUT", "PATCH", "DELETE" ]
         path-pattern: "/admin/api/v1/terms/**"

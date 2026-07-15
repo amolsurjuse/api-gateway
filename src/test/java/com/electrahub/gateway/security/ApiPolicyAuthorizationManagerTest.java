@@ -146,6 +146,34 @@ class ApiPolicyAuthorizationManagerTest {
         assertTrue(decision.isGranted());
     }
 
+    @Test
+    void readOnlyAdminCannotReadUserDirectoriesButSystemAdminCan() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                denyRule("readonly-admin-users-root-deny", List.of("*"), "/user/api/v1/users", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-users-deny", List.of("*"), "/user/api/v1/users/**", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-admin-users-root-deny", List.of("*"), "/user/api/v1/admin/users", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-admin-users-deny", List.of("*"), "/user/api/v1/admin/users/**", List.of("ADMIN_READ_ONLY")),
+                rule("user-service", List.of("*"), "/user/**", false, List.of("USER"))
+        ));
+
+        var manager = manager(properties);
+
+        assertFalse(authorize(manager, "GET", "/user/api/v1/users",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "GET", "/user/api/v1/users/7/profile",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "GET", "/user/api/v1/admin/users",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "GET", "/user/api/v1/admin/users/7",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+
+        assertTrue(authorize(manager, "GET", "/user/api/v1/users",
+                () -> authenticationWithRoles("SYSTEM_ADMIN", "USER")).isGranted());
+        assertTrue(authorize(manager, "GET", "/user/api/v1/admin/users",
+                () -> authenticationWithRoles("SYSTEM_ADMIN", "USER")).isGranted());
+    }
+
     private static AuthorizationDecision authorize(
             ApiPolicyAuthorizationManager manager,
             String method,

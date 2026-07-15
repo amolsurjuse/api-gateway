@@ -174,6 +174,32 @@ class ApiPolicyAuthorizationManagerTest {
                 () -> authenticationWithRoles("SYSTEM_ADMIN", "USER")).isGranted());
     }
 
+    @Test
+    void readOnlyAdminCannotReadDriverIdentityAnalyticsButKeepsAggregateAnalytics() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                denyRule("readonly-admin-billing-users-root-deny", List.of("*"), "/billing/api/v1/admin/analytics/users", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-billing-users-deny", List.of("*"), "/billing/api/v1/admin/analytics/users/**", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-billing-reports-root-deny", List.of("*"), "/billing/api/v1/admin/analytics/reports", List.of("ADMIN_READ_ONLY")),
+                denyRule("readonly-admin-billing-reports-deny", List.of("*"), "/billing/api/v1/admin/analytics/reports/**", List.of("ADMIN_READ_ONLY")),
+                rule("billing-admin-readonly", List.of("GET"), "/billing/api/v1/admin/**", false, List.of("ADMIN_READ_ONLY")),
+                rule("billing-admin-service", List.of("*"), "/billing/api/v1/admin/**", false, List.of("SYSTEM_ADMIN"))
+        ));
+
+        var manager = manager(properties);
+
+        assertFalse(authorize(manager, "GET", "/billing/api/v1/admin/analytics/users",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "GET", "/billing/api/v1/admin/analytics/users/7/sessions",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "GET", "/billing/api/v1/admin/analytics/reports/7/download",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertTrue(authorize(manager, "GET", "/billing/api/v1/admin/analytics/overview",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertTrue(authorize(manager, "GET", "/billing/api/v1/admin/analytics/users",
+                () -> authenticationWithRoles("SYSTEM_ADMIN", "USER")).isGranted());
+    }
+
     private static AuthorizationDecision authorize(
             ApiPolicyAuthorizationManager manager,
             String method,

@@ -234,6 +234,26 @@ app:
         path-pattern: "/billing/**"
         effect: DENY
         required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-billing-users-root-deny
+        methods: [ "*" ]
+        path-pattern: "/billing/api/v1/admin/analytics/users"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-billing-users-deny
+        methods: [ "*" ]
+        path-pattern: "/billing/api/v1/admin/analytics/users/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-billing-reports-root-deny
+        methods: [ "*" ]
+        path-pattern: "/billing/api/v1/admin/analytics/reports"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: readonly-admin-billing-reports-deny
+        methods: [ "*" ]
+        path-pattern: "/billing/api/v1/admin/analytics/reports/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
       - name: readonly-admin-charger-write-deny
         methods: [ "POST", "PUT", "PATCH", "DELETE" ]
         path-pattern: "/charger/api/v1/admin/**"

@@ -99,6 +99,11 @@ app:
         path-pattern: "/actuator/health/**"
         effect: ALLOW
         allow-anonymous: true
+      - name: actuator-prometheus
+        methods: [ "GET" ]
+        path-pattern: "/actuator/prometheus"
+        effect: ALLOW
+        allow-anonymous: true
       - name: openapi-docs
         methods: [ "GET" ]
         path-pattern: "/v3/api-docs/**"

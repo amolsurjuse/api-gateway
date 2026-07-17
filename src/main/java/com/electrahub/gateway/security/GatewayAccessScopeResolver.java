@@ -62,10 +62,9 @@ public class GatewayAccessScopeResolver {
         }
 
         GatewayAccessScope rootScope = buildRootScope(userContext);
-        if (!rootScope.hasReadScope()) {
-            throw forbidden("This account has no administrative scope grants.");
-        }
-
+        // A scoped administrator without grants must see no tenant data, not an
+        // authorization error. Downstream services treat the signed empty scope
+        // as an empty result for reads and deny every operational mutation.
         GatewayAccessScope expanded = rootScope.systemAdmin() ? rootScope : expandLocations(rootScope);
         cache(cacheKey, expanded);
         return expanded;

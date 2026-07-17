@@ -46,6 +46,10 @@ app:
     jwt:
       issuer: ${APP_SECURITY_JWT_ISSUER:auth-service}
       secret: ${APP_SECURITY_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_64+_CHAR_SECRET_CHANGE_ME}
+  access-context:
+    secret: ${APP_INTERNAL_ACCESS_CONTEXT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_ACCESS_CONTEXT_SECRET}
+    cache-ttl: ${APP_INTERNAL_ACCESS_CONTEXT_CACHE_TTL:15s}
+    max-age: ${APP_INTERNAL_ACCESS_CONTEXT_MAX_AGE:30s}
   http-logging:
     enabled: ${APP_HTTP_LOGGING_ENABLED:true}
     include-headers: ${APP_HTTP_LOGGING_INCLUDE_HEADERS:true}
@@ -319,6 +323,11 @@ app:
         path-pattern: "/user/api/v1/admin/terms/**"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN" ]
+      - name: admin-access-self
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/admin/access/me"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
       - name: user-admin
         methods: [ "*" ]
         path-pattern: "/user/api/v1/admin/**"
@@ -348,7 +357,7 @@ app:
         methods: [ "*" ]
         path-pattern: "/billing/api/v1/admin/**"
         effect: ALLOW
-        required-roles: [ "SYSTEM_ADMIN" ]
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
       - name: billing-service
         methods: [ "*" ]
         path-pattern: "/billing/**"
@@ -363,7 +372,7 @@ app:
         methods: [ "*" ]
         path-pattern: "/charger/api/v1/admin/**"
         effect: ALLOW
-        required-roles: [ "SYSTEM_ADMIN" ]
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
       - name: charger-admin-chargers-connectors-public
         methods: [ "GET" ]
         path-pattern: "/charger/api/v1/admin/chargers/connectors"
@@ -423,7 +432,17 @@ app:
         methods: [ "GET" ]
         path-pattern: "/session/api/v1/sessions/admin/**"
         effect: ALLOW
-        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
+      - name: session-admin-scope-write
+        methods: [ "POST" ]
+        path-pattern: "/session/api/v1/sessions/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ENTERPRISE", "NETWORK", "LOCATION" ]
+      - name: readonly-admin-session-write-deny
+        methods: [ "POST", "PUT", "PATCH", "DELETE" ]
+        path-pattern: "/session/api/v1/sessions/admin/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY" ]
       - name: session-service
         methods: [ "*" ]
         path-pattern: "/session/**"

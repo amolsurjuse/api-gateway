@@ -1,6 +1,9 @@
 package com.electrahub.gateway.route;
 
 import com.electrahub.gateway.config.HttpClientConfig.GatewayHttpClientProperties;
+import com.electrahub.gateway.security.GatewayAccessScope;
+import com.electrahub.gateway.security.GatewayAccessScopeHeaderSigner;
+import com.electrahub.gateway.security.GatewayAccessScopeResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -50,6 +53,8 @@ class GatewayProxyControllerIdentityTest {
                 RestClient.builder(),
                 mock(HttpExchangeLogger.class),
                 new GatewayHttpClientProperties(Duration.ofSeconds(1), Duration.ofSeconds(1), Duration.ofSeconds(1)),
+                mock(GatewayAccessScopeResolver.class),
+                mock(GatewayAccessScopeHeaderSigner.class),
                 "electrahub"
         );
     }
@@ -62,9 +67,10 @@ class GatewayProxyControllerIdentityTest {
         Method method = GatewayProxyController.class.getDeclaredMethod(
                 "copyHeaders",
                 jakarta.servlet.http.HttpServletRequest.class,
-                HttpHeaders.class
+                HttpHeaders.class,
+                GatewayAccessScope.class
         );
         method.setAccessible(true);
-        method.invoke(controller, request, downstream);
+        method.invoke(controller, request, downstream, null);
     }
 }

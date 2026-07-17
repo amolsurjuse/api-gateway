@@ -3,6 +3,9 @@ package com.electrahub.gateway.route;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.electrahub.gateway.config.HttpClientConfig.GatewayHttpClientProperties;
+import com.electrahub.gateway.security.GatewayAccessScope;
+import com.electrahub.gateway.security.GatewayAccessScopeHeaderSigner;
+import com.electrahub.gateway.security.GatewayAccessScopeResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -85,7 +88,9 @@ public class GatewayProxyController {
     private static final String AUTHENTICATED_TENANT_HEADER = "X-ElectraHub-Tenant-Id";
     private static final Set<String> TRUSTED_IDENTITY_HEADERS = Set.of(
             AUTHENTICATED_USER_HEADER.toLowerCase(Locale.ROOT),
-            AUTHENTICATED_TENANT_HEADER.toLowerCase(Locale.ROOT)
+            AUTHENTICATED_TENANT_HEADER.toLowerCase(Locale.ROOT),
+            GatewayAccessScopeHeaderSigner.CONTEXT_HEADER.toLowerCase(Locale.ROOT),
+            GatewayAccessScopeHeaderSigner.SIGNATURE_HEADER.toLowerCase(Locale.ROOT)
     );
     private static final String LEGACY_AUTH_TERMS_PREFIX = "/auth/api/terms";
     private static final String TERMS_ROUTE_PREFIX = "terms";
@@ -94,6 +99,8 @@ public class GatewayProxyController {
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
     private final HttpExchangeLogger httpExchangeLogger;
+    private final GatewayAccessScopeResolver gatewayAccessScopeResolver;
+    private final GatewayAccessScopeHeaderSigner gatewayAccessScopeHeaderSigner;
     private final String defaultTenant;
 
     /**
@@ -119,6 +126,8 @@ public class GatewayProxyController {
             RestClient.Builder restClientBuilder,
             HttpExchangeLogger httpExchangeLogger,
             GatewayHttpClientProperties httpClientProperties,
+            GatewayAccessScopeResolver gatewayAccessScopeResolver,
+            GatewayAccessScopeHeaderSigner gatewayAccessScopeHeaderSigner,
             @Value("${gateway.identity.default-tenant:electrahub}") String defaultTenant
     ) {
         log.info(" Entering GatewayProxyController#GatewayProxyController");
@@ -126,6 +135,8 @@ public class GatewayProxyController {
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
         this.httpExchangeLogger = httpExchangeLogger;
+        this.gatewayAccessScopeResolver = gatewayAccessScopeResolver;
+        this.gatewayAccessScopeHeaderSigner = gatewayAccessScopeHeaderSigner;
         this.defaultTenant = defaultTenant;
         this.streamingHttpClient = HttpClient.newBuilder()
                 .connectTimeout(httpClientProperties.streamingConnectTimeout())
@@ -179,6 +190,10 @@ public class GatewayProxyController {
         }
         final String targetUrl = resolvedTargetUrl;
 
+        GatewayAccessScope accessScope = requiresScopedAdministrativeAccess(routeTarget)
+                ? gatewayAccessScopeResolver.resolve(request)
+                : null;
+
         log.debug("Proxying {} {} → {}", method, path, targetUrl);
         httpExchangeLogger.logRequest(request, method, path, targetUrl, body);
 
@@ -188,13 +203,13 @@ public class GatewayProxyController {
         // client and return a StreamingResponseBody so events are flushed
         // chunk-by-chunk to the client.
         if (acceptsEventStream(request)) {
-            return proxyStreaming(request, servletResponse, targetUrl, method, body, path, startedAtNanos);
+            return proxyStreaming(request, servletResponse, targetUrl, method, body, path, startedAtNanos, accessScope);
         }
 
         try {
             var spec = restClient.method(method)
                     .uri(URI.create(targetUrl))
-                    .headers(headers -> copyHeaders(request, headers));
+                    .headers(headers -> copyHeaders(request, headers, accessScope));
 
             if (body != null && body.length > 0) {
                 String contentType = request.getContentType();
@@ -271,7 +286,8 @@ public class GatewayProxyController {
                                                  HttpMethod method,
                                                  byte[] body,
                                                  String path,
-                                                 long startedAtNanos) {
+                                                 long startedAtNanos,
+                                                 GatewayAccessScope accessScope) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(targetUrl))
@@ -299,7 +315,7 @@ public class GatewayProxyController {
                     }
                 }
             }
-            addTrustedIdentityHeaders(request, builder);
+            addTrustedIdentityHeaders(request, builder, accessScope);
 
             HttpRequest.BodyPublisher publisher = (body == null || body.length == 0)
                     ? HttpRequest.BodyPublishers.noBody()
@@ -393,7 +409,7 @@ public class GatewayProxyController {
     /**
      * Copy request headers to the downstream request, filtering out hop-by-hop headers.
      */
-    private void copyHeaders(HttpServletRequest request, HttpHeaders headers) {
+    private void copyHeaders(HttpServletRequest request, HttpHeaders headers, GatewayAccessScope accessScope) {
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String name = headerNames.nextElement();
@@ -407,25 +423,44 @@ public class GatewayProxyController {
                 }
             }
         }
-        addTrustedIdentityHeaders(request, headers);
+        addTrustedIdentityHeaders(request, headers, accessScope);
     }
 
-    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpHeaders headers) {
+    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpHeaders headers, GatewayAccessScope accessScope) {
         String userId = authenticatedUserId(request);
         if (userId == null) {
             return;
         }
         headers.set(AUTHENTICATED_USER_HEADER, userId);
         headers.set(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+        if (accessScope != null) {
+            gatewayAccessScopeHeaderSigner.apply(headers, accessScope);
+        }
     }
 
-    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpRequest.Builder builder) {
+    private void addTrustedIdentityHeaders(HttpServletRequest request, HttpRequest.Builder builder, GatewayAccessScope accessScope) {
         String userId = authenticatedUserId(request);
         if (userId == null) {
             return;
         }
         builder.header(AUTHENTICATED_USER_HEADER, userId);
         builder.header(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+        if (accessScope != null) {
+            String payload = gatewayAccessScopeHeaderSigner.payload(accessScope);
+            builder.header(GatewayAccessScopeHeaderSigner.CONTEXT_HEADER, payload);
+            builder.header(GatewayAccessScopeHeaderSigner.SIGNATURE_HEADER, gatewayAccessScopeHeaderSigner.signature(payload));
+        }
+    }
+
+    private boolean requiresScopedAdministrativeAccess(RouteTarget routeTarget) {
+        if (routeTarget == null) {
+            return false;
+        }
+        String downstreamPath = routeTarget.downstreamPath();
+        return ("charger-management".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin"))
+                || ("session".equals(routeTarget.prefix()) && (downstreamPath.startsWith("/api/v1/sessions/admin")
+                || downstreamPath.startsWith("/api/v1/admin/dashboard-stats")))
+                || ("billing".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin/analytics"));
     }
 
     private String authenticatedUserId(HttpServletRequest request) {

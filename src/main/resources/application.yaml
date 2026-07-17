@@ -278,6 +278,11 @@ app:
         path-pattern: "/subscription/api/v1/subscriptions/**"
         effect: DENY
         required-roles: [ "ADMIN_READ_ONLY" ]
+      - name: scoped-admin-subscription-read-deny
+        methods: [ "GET" ]
+        path-pattern: "/subscription/api/v1/subscriptions/**"
+        effect: DENY
+        required-roles: [ "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
       - name: readonly-admin-pricing-plans-write-deny
         methods: [ "POST", "PUT", "PATCH", "DELETE" ]
         path-pattern: "/pricing/**"

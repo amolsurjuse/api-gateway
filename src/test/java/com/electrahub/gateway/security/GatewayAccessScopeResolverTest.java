@@ -46,7 +46,7 @@ class GatewayAccessScopeResolverTest {
         );
         GatewayAccessScopeCache scopeCache = mock(GatewayAccessScopeCache.class);
         when(scopeCache.lookup(eq(actorId), eq("1"), eq("test-token")))
-                .thenReturn(GatewayAccessScopeCache.Lookup.miss("0"));
+                .thenReturn(GatewayAccessScopeCache.Lookup.miss("0", "0:" + "a".repeat(43)));
         when(scopeCache.store(eq(actorId), eq("1"), eq("test-token"), eq("0"), any(GatewayAccessScope.class)))
                 .thenReturn(GatewayAccessScopeCache.StoreResult.STORED);
         GatewayAccessScopeResolver resolver = new GatewayAccessScopeResolver(
@@ -99,7 +99,7 @@ class GatewayAccessScopeResolverTest {
                 Instant.EPOCH
         );
         when(scopeCache.lookup(eq(actorId), eq("4"), eq("token-4")))
-                .thenReturn(GatewayAccessScopeCache.Lookup.hit("3", cached));
+                .thenReturn(GatewayAccessScopeCache.Lookup.hit("3", "3:" + "b".repeat(43), cached));
 
         GatewayAccessScopeResolver resolver = new GatewayAccessScopeResolver(
                 new RouteRegistry(),
@@ -118,5 +118,6 @@ class GatewayAccessScopeResolverTest {
 
         assertThat(scope.readLocationIds()).containsExactly("LOCATION-1");
         assertThat(scope.expiresAt()).isAfter(Instant.now());
+        assertThat(scope.scopeReference()).isEqualTo("3:" + "b".repeat(43));
     }
 }

@@ -46,6 +46,17 @@ public class GatewayAccessScopeHeaderSigner {
     }
 
     public String payload(GatewayAccessScope scope) {
+        if (scope.scopeReference() != null && !scope.scopeReference().isBlank()) {
+            return compactPayload(scope);
+        }
+        return payloadInline(scope);
+    }
+
+    /**
+     * Used while resolving a scope and when Redis is unavailable. Keeping the legacy payload here
+     * makes a rolling deployment compatible with services that have not yet read compact scopes.
+     */
+    public String payloadInline(GatewayAccessScope scope) {
         try {
             Map<String, Object> body = Map.of(
                     "actorId", scope.actorId().toString(),
@@ -56,6 +67,22 @@ public class GatewayAccessScopeHeaderSigner {
                     "operateEnterpriseIds", scope.operateEnterpriseIds(),
                     "operateNetworkIds", scope.operateNetworkIds(),
                     "operateLocationIds", scope.operateLocationIds(),
+                    "expiresAt", scope.expiresAt().toEpochMilli()
+            );
+            return Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(objectMapper.writeValueAsBytes(body));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Could not serialize the admin access context", ex);
+        }
+    }
+
+    private String compactPayload(GatewayAccessScope scope) {
+        try {
+            Map<String, Object> body = Map.of(
+                    "version", 2,
+                    "actorId", scope.actorId().toString(),
+                    "systemAdmin", scope.systemAdmin(),
+                    "scopeRef", scope.scopeReference(),
                     "expiresAt", scope.expiresAt().toEpochMilli()
             );
             return Base64.getUrlEncoder().withoutPadding()

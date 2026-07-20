@@ -11,6 +11,9 @@ import org.springframework.web.client.RestClient;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -56,6 +59,30 @@ class GatewayProxyControllerIdentityTest {
         assertThat(requiresScopedAdministrativeAccess(controller, "/charger/graphql")).isFalse();
     }
 
+    @Test
+    void doesNotForwardBearerTokenForScopedAdministrativeRequests() throws Exception {
+        GatewayProxyController controller = controller();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("uid", "trusted-user");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer client-token");
+        HttpHeaders downstream = new HttpHeaders();
+
+        copyHeaders(controller, request, downstream, new GatewayAccessScope(
+                UUID.randomUUID(),
+                false,
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Instant.now().plusSeconds(30)
+        ));
+
+        assertThat(downstream.getFirst(HttpHeaders.AUTHORIZATION)).isNull();
+        assertThat(downstream.getFirst("X-ElectraHub-User-Id")).isEqualTo("trusted-user");
+    }
+
     private GatewayProxyController controller() {
         return new GatewayProxyController(
                 new RouteRegistry(),
@@ -73,6 +100,15 @@ class GatewayProxyControllerIdentityTest {
             MockHttpServletRequest request,
             HttpHeaders downstream
     ) throws Exception {
+        copyHeaders(controller, request, downstream, null);
+    }
+
+    private void copyHeaders(
+            GatewayProxyController controller,
+            MockHttpServletRequest request,
+            HttpHeaders downstream,
+            GatewayAccessScope scope
+    ) throws Exception {
         Method method = GatewayProxyController.class.getDeclaredMethod(
                 "copyHeaders",
                 jakarta.servlet.http.HttpServletRequest.class,
@@ -80,7 +116,7 @@ class GatewayProxyControllerIdentityTest {
                 GatewayAccessScope.class
         );
         method.setAccessible(true);
-        method.invoke(controller, request, downstream, null);
+        method.invoke(controller, request, downstream, scope);
     }
 
     private boolean requiresScopedAdministrativeAccess(

@@ -303,7 +303,8 @@ public class GatewayProxyController {
                 if (HOP_BY_HOP_HEADERS.contains(lower)
                         || JDK_HTTP_RESTRICTED_HEADERS.contains(lower)
                         || GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lower)
-                        || TRUSTED_IDENTITY_HEADERS.contains(lower)) {
+                        || TRUSTED_IDENTITY_HEADERS.contains(lower)
+                        || (accessScope != null && "authorization".equals(lower))) {
                     continue;
                 }
                 Enumeration<String> values = request.getHeaders(name);
@@ -416,7 +417,8 @@ public class GatewayProxyController {
             String lowerName = name.toLowerCase(Locale.ROOT);
             if (!HOP_BY_HOP_HEADERS.contains(lowerName)
                     && !GATEWAY_MANAGED_CORS_REQUEST_HEADERS.contains(lowerName)
-                    && !TRUSTED_IDENTITY_HEADERS.contains(lowerName)) {
+                    && !TRUSTED_IDENTITY_HEADERS.contains(lowerName)
+                    && !(accessScope != null && "authorization".equals(lowerName))) {
                 Enumeration<String> values = request.getHeaders(name);
                 while (values.hasMoreElements()) {
                     headers.add(name, values.nextElement());

@@ -95,17 +95,18 @@ public class GatewayAccessScopeCache {
             }
 
             String generation = result.get(0).toString();
+            String scopeReference = scopeReference(generation, identity);
             String value = result.get(1) == null ? "" : result.get(1).toString();
             if (value.isBlank()) {
-                return Lookup.miss(generation);
+                return Lookup.miss(generation, scopeReference);
             }
 
             CachedScope cached = objectMapper.readValue(value, CachedScope.class);
             if (!actorId.equals(cached.actorId())) {
                 log.warn("Discarded administrative scope cache entry with a mismatched actor");
-                return Lookup.miss(generation);
+                return Lookup.miss(generation, scopeReference);
             }
-            return Lookup.hit(generation, cached.toScope());
+            return Lookup.hit(generation, scopeReference, cached.toScope());
         } catch (Exception ex) {
             log.warn("Administrative scope cache lookup unavailable for actor={}: {}", actorId, ex.getMessage());
             return null;
@@ -170,7 +171,11 @@ public class GatewayAccessScopeCache {
     }
 
     private String scopeKey(String generation, String identity) {
-        return scopePrefix() + generation + ":" + identity;
+        return scopePrefix() + scopeReference(generation, identity);
+    }
+
+    private String scopeReference(String generation, String identity) {
+        return generation + ":" + identity;
     }
 
     private String identity(UUID actorId, Object tokenVersion, Object tokenId) {
@@ -205,13 +210,13 @@ public class GatewayAccessScopeCache {
         UNAVAILABLE
     }
 
-    public record Lookup(String generation, Optional<GatewayAccessScope> scope) {
-        static Lookup hit(String generation, GatewayAccessScope scope) {
-            return new Lookup(generation, Optional.of(scope));
+    public record Lookup(String generation, String scopeReference, Optional<GatewayAccessScope> scope) {
+        static Lookup hit(String generation, String scopeReference, GatewayAccessScope scope) {
+            return new Lookup(generation, scopeReference, Optional.of(scope));
         }
 
-        static Lookup miss(String generation) {
-            return new Lookup(generation, Optional.empty());
+        static Lookup miss(String generation, String scopeReference) {
+            return new Lookup(generation, scopeReference, Optional.empty());
         }
     }
 

@@ -14,8 +14,34 @@ public record GatewayAccessScope(
         Set<String> operateEnterpriseIds,
         Set<String> operateNetworkIds,
         Set<String> operateLocationIds,
+        String scopeReference,
         Instant expiresAt
 ) {
+    public GatewayAccessScope(
+            UUID actorId,
+            boolean systemAdmin,
+            Set<String> readEnterpriseIds,
+            Set<String> readNetworkIds,
+            Set<String> readLocationIds,
+            Set<String> operateEnterpriseIds,
+            Set<String> operateNetworkIds,
+            Set<String> operateLocationIds,
+            Instant expiresAt
+    ) {
+        this(
+                actorId,
+                systemAdmin,
+                readEnterpriseIds,
+                readNetworkIds,
+                readLocationIds,
+                operateEnterpriseIds,
+                operateNetworkIds,
+                operateLocationIds,
+                null,
+                expiresAt
+        );
+    }
+
     public GatewayAccessScope {
         readEnterpriseIds = immutable(readEnterpriseIds);
         readNetworkIds = immutable(readNetworkIds);
@@ -43,7 +69,23 @@ public record GatewayAccessScope(
                 operateEnterpriseIds,
                 operateNetworkIds,
                 operateLocationIds,
+                scopeReference,
                 newExpiresAt
+        );
+    }
+
+    public GatewayAccessScope withScopeReference(String newScopeReference) {
+        return new GatewayAccessScope(
+                actorId,
+                systemAdmin,
+                readEnterpriseIds,
+                readNetworkIds,
+                readLocationIds,
+                operateEnterpriseIds,
+                operateNetworkIds,
+                operateLocationIds,
+                newScopeReference,
+                expiresAt
         );
     }
 

@@ -54,7 +54,9 @@ public class GatewayAccessScopeResolver {
             return resolveFreshScope(actorId, authorization);
         }
         if (lookup.scope().isPresent()) {
-            return lookup.scope().orElseThrow().withExpiresAt(expiresAt());
+            return lookup.scope().orElseThrow()
+                    .withExpiresAt(expiresAt())
+                    .withScopeReference(lookup.scopeReference());
         }
 
         for (int attempt = 0; attempt < 2; attempt++) {
@@ -66,8 +68,10 @@ public class GatewayAccessScopeResolver {
                     lookup.generation(),
                     expanded
             );
-            if (stored == GatewayAccessScopeCache.StoreResult.STORED
-                    || stored == GatewayAccessScopeCache.StoreResult.UNAVAILABLE) {
+            if (stored == GatewayAccessScopeCache.StoreResult.STORED) {
+                return expanded.withScopeReference(lookup.scopeReference());
+            }
+            if (stored == GatewayAccessScopeCache.StoreResult.UNAVAILABLE) {
                 return expanded;
             }
             lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
@@ -75,7 +79,9 @@ public class GatewayAccessScopeResolver {
                 return resolveFreshScope(actorId, authorization);
             }
             if (lookup.scope().isPresent()) {
-                return lookup.scope().orElseThrow().withExpiresAt(expiresAt());
+                return lookup.scope().orElseThrow()
+                        .withExpiresAt(expiresAt())
+                        .withScopeReference(lookup.scopeReference());
             }
         }
         throw unavailable("Administrative access changed while resolving its scope. Please retry the request.");
@@ -122,7 +128,7 @@ public class GatewayAccessScopeResolver {
             throw unavailable("The charger service route is unavailable for scope expansion.");
         }
         try {
-            String payload = signer.payload(rootScope);
+            String payload = signer.payloadInline(rootScope);
             ExpandedLocationScope response = restClient.post()
                     .uri(chargerService + "/api/v1/internal/access/expand-locations")
                     .header(GatewayAccessScopeHeaderSigner.CONTEXT_HEADER, payload)

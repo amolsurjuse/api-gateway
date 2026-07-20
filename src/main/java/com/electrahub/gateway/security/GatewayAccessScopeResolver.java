@@ -12,10 +12,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,21 +23,20 @@ public class GatewayAccessScopeResolver {
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
     private final GatewayAccessScopeHeaderSigner signer;
-    private final Duration cacheTtl;
+    private final GatewayAccessScopeCache scopeCache;
     private final Duration maxAge;
-    private final Map<String, CacheEntry> cache = new HashMap<>();
 
     public GatewayAccessScopeResolver(
             RouteRegistry routeRegistry,
             RestClient.Builder restClientBuilder,
             GatewayAccessScopeHeaderSigner signer,
-            @Value("${app.access-context.cache-ttl:15s}") Duration cacheTtl,
+            GatewayAccessScopeCache scopeCache,
             @Value("${app.access-context.max-age:30s}") Duration maxAge
     ) {
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
         this.signer = signer;
-        this.cacheTtl = cacheTtl;
+        this.scopeCache = scopeCache;
         this.maxAge = maxAge;
     }
 
@@ -50,12 +47,41 @@ public class GatewayAccessScopeResolver {
             throw forbidden("An authenticated administrative session is required.");
         }
 
-        String cacheKey = actorId + ":" + request.getAttribute("tv") + ":" + request.getAttribute("jti");
-        CacheEntry cached = cached(cacheKey);
-        if (cached != null) {
-            return cached.scope();
+        Object tokenVersion = request.getAttribute("tv");
+        Object tokenId = request.getAttribute("jti");
+        GatewayAccessScopeCache.Lookup lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
+        if (lookup == null) {
+            return resolveFreshScope(actorId, authorization);
+        }
+        if (lookup.scope().isPresent()) {
+            return lookup.scope().orElseThrow().withExpiresAt(expiresAt());
         }
 
+        for (int attempt = 0; attempt < 2; attempt++) {
+            GatewayAccessScope expanded = resolveFreshScope(actorId, authorization);
+            GatewayAccessScopeCache.StoreResult stored = scopeCache.store(
+                    actorId,
+                    tokenVersion,
+                    tokenId,
+                    lookup.generation(),
+                    expanded
+            );
+            if (stored == GatewayAccessScopeCache.StoreResult.STORED
+                    || stored == GatewayAccessScopeCache.StoreResult.UNAVAILABLE) {
+                return expanded;
+            }
+            lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
+            if (lookup == null) {
+                return resolveFreshScope(actorId, authorization);
+            }
+            if (lookup.scope().isPresent()) {
+                return lookup.scope().orElseThrow().withExpiresAt(expiresAt());
+            }
+        }
+        throw unavailable("Administrative access changed while resolving its scope. Please retry the request.");
+    }
+
+    private GatewayAccessScope resolveFreshScope(UUID actorId, String authorization) {
         UserAccessContext userContext = readUserContext(authorization);
         if (!actorId.equals(userContext.actorId())) {
             throw forbidden("The administrative access context did not match the authenticated user.");
@@ -65,9 +91,7 @@ public class GatewayAccessScopeResolver {
         // A scoped administrator without grants must see no tenant data, not an
         // authorization error. Downstream services treat the signed empty scope
         // as an empty result for reads and deny every operational mutation.
-        GatewayAccessScope expanded = rootScope.systemAdmin() ? rootScope : expandLocations(rootScope);
-        cache(cacheKey, expanded);
-        return expanded;
+        return rootScope.systemAdmin() ? rootScope : expandLocations(rootScope);
     }
 
     private UserAccessContext readUserContext(String authorization) {
@@ -117,7 +141,7 @@ public class GatewayAccessScopeResolver {
                     rootScope.operateEnterpriseIds(),
                     rootScope.operateNetworkIds(),
                     response.operateLocationIds(),
-                    rootScope.expiresAt()
+                    expiresAt()
             );
         } catch (ResponseStatusException ex) {
             throw ex;
@@ -154,7 +178,7 @@ public class GatewayAccessScopeResolver {
                 operateEnterpriseIds,
                 operateNetworkIds,
                 operateLocationIds,
-                Instant.now().plus(maxAge)
+                expiresAt()
         );
     }
 
@@ -179,24 +203,8 @@ public class GatewayAccessScopeResolver {
         }
     }
 
-    private synchronized CacheEntry cached(String key) {
-        CacheEntry entry = cache.get(key);
-        if (entry == null) {
-            return null;
-        }
-        if (entry.expiresAt().isAfter(Instant.now())) {
-            return entry;
-        }
-        cache.remove(key);
-        return null;
-    }
-
-    private synchronized void cache(String key, GatewayAccessScope scope) {
-        if (cache.size() > 10_000) {
-            Instant now = Instant.now();
-            cache.entrySet().removeIf(entry -> !entry.getValue().expiresAt().isAfter(now));
-        }
-        cache.put(key, new CacheEntry(scope, Instant.now().plus(cacheTtl)));
+    private Instant expiresAt() {
+        return Instant.now().plus(maxAge);
     }
 
     private ResponseStatusException forbidden(String message) {
@@ -205,9 +213,6 @@ public class GatewayAccessScopeResolver {
 
     private ResponseStatusException unavailable(String message) {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, message);
-    }
-
-    private record CacheEntry(GatewayAccessScope scope, Instant expiresAt) {
     }
 
     private record UserAccessContext(UUID actorId, boolean systemAdmin, List<ScopeGrant> grants) {

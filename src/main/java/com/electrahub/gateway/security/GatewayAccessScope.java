@@ -33,6 +33,20 @@ public record GatewayAccessScope(
         return systemAdmin || !operateEnterpriseIds.isEmpty() || !operateNetworkIds.isEmpty() || !operateLocationIds.isEmpty();
     }
 
+    public GatewayAccessScope withExpiresAt(Instant newExpiresAt) {
+        return new GatewayAccessScope(
+                actorId,
+                systemAdmin,
+                readEnterpriseIds,
+                readNetworkIds,
+                readLocationIds,
+                operateEnterpriseIds,
+                operateNetworkIds,
+                operateLocationIds,
+                newExpiresAt
+        );
+    }
+
     private static Set<String> immutable(Set<String> values) {
         return values == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(values));
     }

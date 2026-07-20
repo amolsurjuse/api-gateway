@@ -10,6 +10,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,6 +21,11 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class GatewayAccessScopeResolverTest {
 
@@ -38,11 +44,16 @@ class GatewayAccessScopeResolverTest {
                 "test-access-context-secret",
                 "test"
         );
+        GatewayAccessScopeCache scopeCache = mock(GatewayAccessScopeCache.class);
+        when(scopeCache.lookup(eq(actorId), eq("1"), eq("test-token")))
+                .thenReturn(GatewayAccessScopeCache.Lookup.miss("0"));
+        when(scopeCache.store(eq(actorId), eq("1"), eq("test-token"), eq("0"), any(GatewayAccessScope.class)))
+                .thenReturn(GatewayAccessScopeCache.StoreResult.STORED);
         GatewayAccessScopeResolver resolver = new GatewayAccessScopeResolver(
                 routeRegistry,
                 builder,
                 signer,
-                Duration.ofSeconds(15),
+                scopeCache,
                 Duration.ofSeconds(30)
         );
 
@@ -68,6 +79,44 @@ class GatewayAccessScopeResolverTest {
         assertThat(scope.systemAdmin()).isFalse();
         assertThat(scope.readLocationIds()).isEmpty();
         assertThat(scope.operateLocationIds()).isEmpty();
+        verify(scopeCache).store(eq(actorId), eq("1"), eq("test-token"), eq("0"), any(GatewayAccessScope.class));
         server.verify();
+    }
+
+    @Test
+    void reusesRedisScopeWithoutCallingUserOrChargerServices() {
+        UUID actorId = UUID.randomUUID();
+        GatewayAccessScopeCache scopeCache = mock(GatewayAccessScopeCache.class);
+        GatewayAccessScope cached = new GatewayAccessScope(
+                actorId,
+                false,
+                java.util.Set.of(),
+                java.util.Set.of("NETWORK-1"),
+                java.util.Set.of("LOCATION-1"),
+                java.util.Set.of(),
+                java.util.Set.of(),
+                java.util.Set.of(),
+                Instant.EPOCH
+        );
+        when(scopeCache.lookup(eq(actorId), eq("4"), eq("token-4")))
+                .thenReturn(GatewayAccessScopeCache.Lookup.hit("3", cached));
+
+        GatewayAccessScopeResolver resolver = new GatewayAccessScopeResolver(
+                new RouteRegistry(),
+                RestClient.builder(),
+                new GatewayAccessScopeHeaderSigner(new ObjectMapper(), "test-access-context-secret", "test"),
+                scopeCache,
+                Duration.ofSeconds(30)
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("uid", actorId.toString());
+        request.setAttribute("tv", "4");
+        request.setAttribute("jti", "token-4");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token-4");
+
+        GatewayAccessScope scope = resolver.resolve(request);
+
+        assertThat(scope.readLocationIds()).containsExactly("LOCATION-1");
+        assertThat(scope.expiresAt()).isAfter(Instant.now());
     }
 }

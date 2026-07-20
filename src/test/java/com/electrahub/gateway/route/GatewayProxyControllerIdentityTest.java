@@ -47,6 +47,15 @@ class GatewayProxyControllerIdentityTest {
         assertThat(downstream.getFirst("X-ElectraHub-Tenant-Id")).isNull();
     }
 
+    @Test
+    void requiresSignedScopeForBothChargerAdministrationAliases() throws Exception {
+        GatewayProxyController controller = controller();
+
+        assertThat(requiresScopedAdministrativeAccess(controller, "/charger/api/v1/admin/chargers")).isTrue();
+        assertThat(requiresScopedAdministrativeAccess(controller, "/charger-management/api/v1/admin/chargers")).isTrue();
+        assertThat(requiresScopedAdministrativeAccess(controller, "/charger/graphql")).isFalse();
+    }
+
     private GatewayProxyController controller() {
         return new GatewayProxyController(
                 new RouteRegistry(),
@@ -72,5 +81,21 @@ class GatewayProxyControllerIdentityTest {
         );
         method.setAccessible(true);
         method.invoke(controller, request, downstream, null);
+    }
+
+    private boolean requiresScopedAdministrativeAccess(
+            GatewayProxyController controller,
+            String path
+    ) throws Exception {
+        Method resolveRouteTarget = GatewayProxyController.class.getDeclaredMethod("resolveRouteTarget", String.class);
+        resolveRouteTarget.setAccessible(true);
+        Object routeTarget = resolveRouteTarget.invoke(controller, path);
+
+        Method requiresScope = GatewayProxyController.class.getDeclaredMethod(
+                "requiresScopedAdministrativeAccess",
+                routeTarget.getClass()
+        );
+        requiresScope.setAccessible(true);
+        return (boolean) requiresScope.invoke(controller, routeTarget);
     }
 }

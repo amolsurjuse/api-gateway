@@ -457,7 +457,12 @@ public class GatewayProxyController {
             return false;
         }
         String downstreamPath = routeTarget.downstreamPath();
-        return ("charger-management".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin"))
+        // Both public gateway aliases terminate at charger-management-service.
+        // The admin portal uses /charger, while older integrations may still use
+        // /charger-management. Never allow either alias to bypass the signed
+        // administrative scope propagated to the downstream service.
+        return (("charger-management".equals(routeTarget.prefix()) || "charger".equals(routeTarget.prefix()))
+                && downstreamPath.startsWith("/api/v1/admin"))
                 || ("session".equals(routeTarget.prefix()) && (downstreamPath.startsWith("/api/v1/sessions/admin")
                 || downstreamPath.startsWith("/api/v1/admin/dashboard-stats")))
                 || ("billing".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin/analytics"));

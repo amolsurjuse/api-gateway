@@ -467,7 +467,12 @@ public class GatewayProxyController {
                 && downstreamPath.startsWith("/api/v1/admin"))
                 || ("session".equals(routeTarget.prefix()) && (downstreamPath.startsWith("/api/v1/sessions/admin")
                 || downstreamPath.startsWith("/api/v1/admin/dashboard-stats")))
-                || ("billing".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin/analytics"));
+                || ("billing".equals(routeTarget.prefix()) && downstreamPath.startsWith("/api/v1/admin/analytics"))
+                // Payment gateway configuration is deliberately limited to system
+                // administrators. The signed scope prevents a browser-supplied
+                // role header from being trusted by the downstream control plane.
+                || ("payment-gateway".equals(routeTarget.prefix())
+                && downstreamPath.startsWith("/api/v1/gateway/admin"));
     }
 
     private String authenticatedUserId(HttpServletRequest request) {

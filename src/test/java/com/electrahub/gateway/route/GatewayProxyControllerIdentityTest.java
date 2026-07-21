@@ -56,7 +56,9 @@ class GatewayProxyControllerIdentityTest {
 
         assertThat(requiresScopedAdministrativeAccess(controller, "/charger/api/v1/admin/chargers")).isTrue();
         assertThat(requiresScopedAdministrativeAccess(controller, "/charger-management/api/v1/admin/chargers")).isTrue();
+        assertThat(requiresScopedAdministrativeAccess(controller, "/payment-gateway/api/v1/gateway/admin/connections")).isTrue();
         assertThat(requiresScopedAdministrativeAccess(controller, "/charger/graphql")).isFalse();
+        assertThat(requiresScopedAdministrativeAccess(controller, "/payment-gateway/api/v1/gateway/internal/routes/resolve")).isFalse();
     }
 
     @Test

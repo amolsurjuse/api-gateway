@@ -360,6 +360,11 @@ app:
         path-pattern: "/payment/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: payment-gateway-admin
+        methods: [ "*" ]
+        path-pattern: "/payment-gateway/api/v1/gateway/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: billing-admin-service
         methods: [ "*" ]
         path-pattern: "/billing/api/v1/admin/**"
@@ -490,6 +495,7 @@ gateway:
     user: ${GATEWAY_ROUTES_USER:${GATEWAY_ROUTE_USER:http://user-service:8082}}
     subscription: ${GATEWAY_ROUTES_SUBSCRIPTION:${GATEWAY_ROUTE_SUBSCRIPTION:http://subscription-service:8086}}
     payment: ${GATEWAY_ROUTES_PAYMENT:${GATEWAY_ROUTE_PAYMENT:http://payment-service:8083}}
+    payment-gateway: ${GATEWAY_ROUTES_PAYMENT_GATEWAY:${GATEWAY_ROUTE_PAYMENT_GATEWAY:http://payment-gateway-service:8098}}
     billing: ${GATEWAY_ROUTES_BILLING:${GATEWAY_ROUTE_BILLING:http://billing-service:8085}}
     charger-management: ${GATEWAY_ROUTES_CHARGER_MANAGEMENT:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     charger: ${GATEWAY_ROUTES_CHARGER:${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}}

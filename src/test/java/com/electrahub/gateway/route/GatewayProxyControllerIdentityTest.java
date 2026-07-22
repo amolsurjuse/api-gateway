@@ -89,8 +89,13 @@ class GatewayProxyControllerIdentityTest {
         return new GatewayProxyController(
                 new RouteRegistry(),
                 RestClient.builder(),
+                RestClient.builder().build(),
                 mock(HttpExchangeLogger.class),
-                new GatewayHttpClientProperties(Duration.ofSeconds(1), Duration.ofSeconds(1), Duration.ofSeconds(1)),
+                new GatewayHttpClientProperties(
+                        Duration.ofSeconds(1),
+                        Duration.ofSeconds(1),
+                        Duration.ofSeconds(1),
+                        Duration.ofSeconds(1)),
                 mock(GatewayAccessScopeResolver.class),
                 mock(GatewayAccessScopeHeaderSigner.class),
                 "electrahub"

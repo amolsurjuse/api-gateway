@@ -29,24 +29,43 @@ public class HttpClientConfig {
     RestClient.Builder restClientBuilder(GatewayHttpClientProperties properties) {
         LOGGER.info(" Entering HttpClientConfig#restClientBuilder");
         LOGGER.debug(" Entering HttpClientConfig#restClientBuilder with debug context");
-        HttpClient httpClient = HttpClient.newBuilder()
-                .connectTimeout(properties.connectTimeout())
-                .build();
-        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(properties.readTimeout());
+        JdkClientHttpRequestFactory requestFactory = requestFactory(properties.connectTimeout(), properties.readTimeout());
         return RestClient.builder()
                 .requestFactory(requestFactory);
+    }
+
+    /**
+     * Local LLM inference can take longer than a normal service request. Keep
+     * that allowance isolated to the AI route so stalled business APIs still
+     * fail fast under the standard gateway timeout.
+     */
+    @Bean("aiRestClient")
+    RestClient aiRestClient(GatewayHttpClientProperties properties) {
+        return RestClient.builder()
+                .requestFactory(requestFactory(properties.connectTimeout(), properties.aiReadTimeout()))
+                .build();
+    }
+
+    private JdkClientHttpRequestFactory requestFactory(Duration connectTimeout, Duration readTimeout) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(connectTimeout)
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(readTimeout);
+        return requestFactory;
     }
 
     @ConfigurationProperties(prefix = "gateway.http-client")
     public record GatewayHttpClientProperties(
             Duration connectTimeout,
             Duration readTimeout,
+            Duration aiReadTimeout,
             Duration streamingConnectTimeout
     ) {
         public GatewayHttpClientProperties {
             connectTimeout = connectTimeout == null ? Duration.ofSeconds(3) : connectTimeout;
             readTimeout = readTimeout == null ? Duration.ofSeconds(12) : readTimeout;
+            aiReadTimeout = aiReadTimeout == null ? Duration.ofSeconds(55) : aiReadTimeout;
             streamingConnectTimeout = streamingConnectTimeout == null ? Duration.ofSeconds(5) : streamingConnectTimeout;
         }
     }

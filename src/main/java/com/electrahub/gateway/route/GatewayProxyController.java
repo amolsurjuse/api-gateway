@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -98,6 +99,7 @@ public class GatewayProxyController {
 
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
+    private final RestClient aiRestClient;
     private final HttpExchangeLogger httpExchangeLogger;
     private final GatewayAccessScopeResolver gatewayAccessScopeResolver;
     private final GatewayAccessScopeHeaderSigner gatewayAccessScopeHeaderSigner;
@@ -124,6 +126,7 @@ public class GatewayProxyController {
     public GatewayProxyController(
             RouteRegistry routeRegistry,
             RestClient.Builder restClientBuilder,
+            @Qualifier("aiRestClient") RestClient aiRestClient,
             HttpExchangeLogger httpExchangeLogger,
             GatewayHttpClientProperties httpClientProperties,
             GatewayAccessScopeResolver gatewayAccessScopeResolver,
@@ -134,6 +137,7 @@ public class GatewayProxyController {
         log.debug(" Entering GatewayProxyController#GatewayProxyController with debug context");
         this.routeRegistry = routeRegistry;
         this.restClient = restClientBuilder.build();
+        this.aiRestClient = aiRestClient;
         this.httpExchangeLogger = httpExchangeLogger;
         this.gatewayAccessScopeResolver = gatewayAccessScopeResolver;
         this.gatewayAccessScopeHeaderSigner = gatewayAccessScopeHeaderSigner;
@@ -207,7 +211,7 @@ public class GatewayProxyController {
         }
 
         try {
-            var spec = restClient.method(method)
+            var spec = clientFor(prefix).method(method)
                     .uri(URI.create(targetUrl))
                     .headers(headers -> copyHeaders(request, headers, accessScope));
 
@@ -253,6 +257,10 @@ public class GatewayProxyController {
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(("{\"error\":\"Gateway error: " + ex.getMessage() + "\"}").getBytes());
         }
+    }
+
+    private RestClient clientFor(String routePrefix) {
+        return "ai".equals(routePrefix) ? aiRestClient : restClient;
     }
 
     /**

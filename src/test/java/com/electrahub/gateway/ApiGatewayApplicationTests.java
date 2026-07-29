@@ -1,10 +1,14 @@
 package com.electrahub.gateway;
 
+import com.electrahub.gateway.config.RbacProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -21,6 +25,9 @@ import org.springframework.test.context.TestPropertySource;
 class ApiGatewayApplicationTests {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayApplicationTests.class);
 
+    @Autowired
+    private RbacProperties rbacProperties;
+
 
     /**
      * Executes context loads for `ApiGatewayApplicationTests`.
@@ -32,5 +39,17 @@ class ApiGatewayApplicationTests {
     void contextLoads() {
         LOGGER.info(" Entering ApiGatewayApplicationTests#contextLoads");
         LOGGER.debug(" Entering ApiGatewayApplicationTests#contextLoads with debug context");
+    }
+
+    @Test
+    void taxAdministrationIsRestrictedToSystemAdministrators() {
+        assertThat(rbacProperties.getRules())
+                .filteredOn(rule -> "pricing-tax-admin".equals(rule.getName()))
+                .singleElement()
+                .satisfies(rule -> {
+                    assertThat(rule.getPathPattern()).isEqualTo("/pricing/api/v1/admin/tax/**");
+                    assertThat(rule.getRequiredRoles()).containsExactly("SYSTEM_ADMIN");
+                    assertThat(rule.isAllowAnonymous()).isFalse();
+                });
     }
 }

@@ -405,6 +405,11 @@ app:
         path-pattern: "/pricing/api/v1/pricing/plans/**"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pricing-tax-admin
+        methods: [ "*" ]
+        path-pattern: "/pricing/api/v1/admin/tax/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: pricing-search
         methods: [ "POST", "GET" ]
         path-pattern: "/pricing/api/v1/pricing/search/**"

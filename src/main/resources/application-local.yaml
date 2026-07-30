@@ -33,3 +33,4 @@ gateway:
     charger: http://127.0.0.1:8086
     ws-connector: http://127.0.0.1:8091
     pricing: http://127.0.0.1:8092
+    community-voting: http://127.0.0.1:8088

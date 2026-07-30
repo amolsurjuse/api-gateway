@@ -515,6 +515,7 @@ gateway:
     notification: ${GATEWAY_ROUTES_NOTIFICATION:${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}}
     notifications: ${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}
     ai: ${GATEWAY_ROUTES_AI:${GATEWAY_ROUTE_AI:http://ai-support-service:8094}}
+    community-voting: ${GATEWAY_ROUTES_COMMUNITY_VOTING:${GATEWAY_ROUTE_COMMUNITY_VOTING:http://community-voting-service:8080}}
 
 grpc:
   client:

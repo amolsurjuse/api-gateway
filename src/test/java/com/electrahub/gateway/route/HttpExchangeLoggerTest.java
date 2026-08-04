@@ -87,4 +87,26 @@ class HttpExchangeLoggerTest {
         assertThat(output).doesNotContain("<disabled>");
         assertThat(output).doesNotContain("<truncated");
     }
+
+    @Test
+    void omitsProviderWebhookBodyAndSignatureHeaders(CapturedOutput output) {
+        HttpExchangeLogger logger = new HttpExchangeLogger(true, true, true, 4096);
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST", "/payment-gateway/api/v1/gateway/webhooks/00000000-0000-0000-0000-000000000001"
+        );
+        request.setContentType("application/json");
+        request.addHeader("Stripe-Signature", "t=123,v1=provider-secret");
+        byte[] body = "{\"payload\":\"signed-payment-payload\"}".getBytes(StandardCharsets.UTF_8);
+
+        logger.logRequest(
+                request,
+                HttpMethod.POST,
+                request.getRequestURI(),
+                "http://payment-gateway-service:8098/api/v1/gateway/webhooks/id",
+                body
+        );
+
+        assertThat(output).contains("<verified-provider-webhook-omitted>", "Stripe-Signature=[***]");
+        assertThat(output).doesNotContain("provider-secret", "signed-payment-payload");
+    }
 }

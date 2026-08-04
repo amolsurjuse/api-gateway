@@ -39,7 +39,11 @@ public class HttpExchangeLogger {
             "x-api-key",
             "x-auth-token",
             "x-csrf-token",
-            "x-internal-api-key"
+            "x-internal-api-key",
+            "stripe-signature",
+            "x-razorpay-signature",
+            "x-razorpay-event-id",
+            "hmacsignature"
     );
 
     private static final Set<String> SENSITIVE_QUERY_PARAMS = Set.of(
@@ -55,7 +59,7 @@ public class HttpExchangeLogger {
     );
 
     private static final Pattern JSON_SECRET_FIELD_PATTERN = Pattern.compile(
-            "(?i)(\"(?:accessToken|authorization|cardNumber|clientSecret|cvv|idToken|password|refreshToken|secret|token)\"\\s*:\\s*\")([^\"]*)(\")"
+            "(?i)(\"(?:accessToken|authorization|cardNumber|clientSecret|cvv|idToken|password|providerToken|refreshToken|secret|sessionData|token|tokenReference)\"\\s*:\\s*\")([^\"]*)(\")"
     );
 
     private final boolean enabled;
@@ -98,7 +102,9 @@ public class HttpExchangeLogger {
                 inboundUrl(request, path),
                 sanitizeUrl(targetUrl),
                 shouldIncludeHeaders() ? sanitizeRequestHeaders(request) : "<disabled>",
-                shouldIncludeBodies() ? summarizeBody(body, request.getContentType()) : "<disabled>");
+                shouldIncludeBodies()
+                        ? (isPaymentWebhook(path) ? "<verified-provider-webhook-omitted>" : summarizeBody(body, request.getContentType()))
+                        : "<disabled>");
     }
 
     public void logResponse(
@@ -235,6 +241,10 @@ public class HttpExchangeLogger {
 
     private boolean shouldIncludeBodies() {
         return fullRequestResponseLogging || includeBodies;
+    }
+
+    private boolean isPaymentWebhook(String path) {
+        return path != null && path.startsWith("/payment-gateway/api/v1/gateway/webhooks/");
     }
 
     private boolean isTextLike(String contentType) {

@@ -360,6 +360,11 @@ app:
         path-pattern: "/subscription/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: payment-admin-refunds
+        methods: [ "*" ]
+        path-pattern: "/payment/api/v1/payment/admin/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: payment-service
         methods: [ "*" ]
         path-pattern: "/payment/**"

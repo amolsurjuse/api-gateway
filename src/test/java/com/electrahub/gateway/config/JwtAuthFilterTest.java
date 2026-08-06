@@ -127,6 +127,38 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void propagatesTenantAndRolesFromValidToken() throws Exception {
+        String token = "tenant-token";
+        UUID uid = UUID.randomUUID();
+        Date expiresAt = new Date(System.currentTimeMillis() + 600_000L);
+        JwtService.ParsedToken parsedToken = new JwtService.ParsedToken(
+                "admin@example.com",
+                "jti-tenant",
+                uid.toString(),
+                4L,
+                expiresAt,
+                List.of("TENANT_ADMIN", "USER"),
+                "tenant-a"
+        );
+
+        when(jwtService.parseAndValidate(token)).thenReturn(parsedToken);
+        when(jwtService.isNotExpired(expiresAt)).thenReturn(true);
+        when(denylistService.isDenied("jti-tenant")).thenReturn(false);
+        when(tokenVersionService.getVersion(uid)).thenReturn(4L);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ai-support/api/v1/chat/messages");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(chain.getRequest()).isSameAs(request);
+        assertThat(request.getAttribute("tenantId")).isEqualTo("tenant-a");
+        assertThat(request.getAttribute("roles")).isEqualTo(List.of("TENANT_ADMIN", "USER"));
+    }
+
+    @Test
     void allowsTermsPendingTokenVersionToReachTermsGate() throws Exception {
         String token = "terms-pending-token";
         UUID uid = UUID.randomUUID();

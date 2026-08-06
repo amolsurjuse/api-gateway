@@ -25,6 +25,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Enumeration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -91,7 +93,9 @@ public class GatewayProxyController {
             AUTHENTICATED_USER_HEADER.toLowerCase(Locale.ROOT),
             AUTHENTICATED_TENANT_HEADER.toLowerCase(Locale.ROOT),
             GatewayAccessScopeHeaderSigner.CONTEXT_HEADER.toLowerCase(Locale.ROOT),
-            GatewayAccessScopeHeaderSigner.SIGNATURE_HEADER.toLowerCase(Locale.ROOT)
+            GatewayAccessScopeHeaderSigner.SIGNATURE_HEADER.toLowerCase(Locale.ROOT),
+            GatewayAccessScopeHeaderSigner.IDENTITY_CONTEXT_HEADER.toLowerCase(Locale.ROOT),
+            GatewayAccessScopeHeaderSigner.IDENTITY_SIGNATURE_HEADER.toLowerCase(Locale.ROOT)
     );
     private static final String LEGACY_AUTH_TERMS_PREFIX = "/auth/api/terms";
     private static final String TERMS_ROUTE_PREFIX = "terms";
@@ -442,7 +446,10 @@ public class GatewayProxyController {
             return;
         }
         headers.set(AUTHENTICATED_USER_HEADER, userId);
-        headers.set(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+        String tenantId = authenticatedTenantId(request);
+        headers.set(AUTHENTICATED_TENANT_HEADER, tenantId);
+        gatewayAccessScopeHeaderSigner.applyIdentity(
+                headers, userId, tenantId, authenticatedRoles(request), identityExpiresAt(request));
         if (accessScope != null) {
             gatewayAccessScopeHeaderSigner.apply(headers, accessScope);
         }
@@ -454,12 +461,44 @@ public class GatewayProxyController {
             return;
         }
         builder.header(AUTHENTICATED_USER_HEADER, userId);
-        builder.header(AUTHENTICATED_TENANT_HEADER, defaultTenant);
+        String tenantId = authenticatedTenantId(request);
+        builder.header(AUTHENTICATED_TENANT_HEADER, tenantId);
+        String identityPayload = gatewayAccessScopeHeaderSigner.identityPayload(
+                userId, tenantId, authenticatedRoles(request), identityExpiresAt(request));
+        builder.header(GatewayAccessScopeHeaderSigner.IDENTITY_CONTEXT_HEADER, identityPayload);
+        builder.header(GatewayAccessScopeHeaderSigner.IDENTITY_SIGNATURE_HEADER,
+                gatewayAccessScopeHeaderSigner.signature(identityPayload));
         if (accessScope != null) {
             String payload = gatewayAccessScopeHeaderSigner.payload(accessScope);
             builder.header(GatewayAccessScopeHeaderSigner.CONTEXT_HEADER, payload);
             builder.header(GatewayAccessScopeHeaderSigner.SIGNATURE_HEADER, gatewayAccessScopeHeaderSigner.signature(payload));
         }
+    }
+
+    private String authenticatedTenantId(HttpServletRequest request) {
+        Object tenantId = request.getAttribute("tenantId");
+        if (tenantId == null || tenantId.toString().isBlank()) {
+            return defaultTenant;
+        }
+        return tenantId.toString().trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> authenticatedRoles(HttpServletRequest request) {
+        Object roles = request.getAttribute("roles");
+        if (roles instanceof List<?> values) {
+            return values.stream().map(String::valueOf).toList();
+        }
+        return List.of();
+    }
+
+    private Instant identityExpiresAt(HttpServletRequest request) {
+        Instant shortLived = Instant.now().plusSeconds(60);
+        Object expiration = request.getAttribute("exp");
+        if (expiration instanceof Date date && date.toInstant().isBefore(shortLived)) {
+            return date.toInstant();
+        }
+        return shortLived;
     }
 
     private boolean requiresScopedAdministrativeAccess(RouteTarget routeTarget) {

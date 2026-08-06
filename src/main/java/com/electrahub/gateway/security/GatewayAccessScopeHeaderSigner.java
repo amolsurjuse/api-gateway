@@ -10,13 +10,17 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 
 @Component
 public class GatewayAccessScopeHeaderSigner {
 
     public static final String CONTEXT_HEADER = "X-ElectraHub-Access-Context";
     public static final String SIGNATURE_HEADER = "X-ElectraHub-Access-Context-Signature";
+    public static final String IDENTITY_CONTEXT_HEADER = "X-ElectraHub-Identity-Context";
+    public static final String IDENTITY_SIGNATURE_HEADER = "X-ElectraHub-Identity-Context-Signature";
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
 
@@ -43,6 +47,35 @@ public class GatewayAccessScopeHeaderSigner {
         String payload = payload(scope);
         headers.set(CONTEXT_HEADER, payload);
         headers.set(SIGNATURE_HEADER, signature(payload));
+    }
+
+    public void applyIdentity(HttpHeaders headers,
+                              String userId,
+                              String tenantId,
+                              List<String> roles,
+                              Instant expiresAt) {
+        String payload = identityPayload(userId, tenantId, roles, expiresAt);
+        headers.set(IDENTITY_CONTEXT_HEADER, payload);
+        headers.set(IDENTITY_SIGNATURE_HEADER, signature(payload));
+    }
+
+    public String identityPayload(String userId,
+                                  String tenantId,
+                                  List<String> roles,
+                                  Instant expiresAt) {
+        try {
+            Map<String, Object> body = Map.of(
+                    "version", 1,
+                    "userId", userId,
+                    "tenantId", tenantId,
+                    "roles", roles == null ? List.of() : List.copyOf(roles),
+                    "expiresAt", expiresAt.toEpochMilli()
+            );
+            return Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(objectMapper.writeValueAsBytes(body));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Could not serialize the trusted identity context", ex);
+        }
     }
 
     public String payload(GatewayAccessScope scope) {

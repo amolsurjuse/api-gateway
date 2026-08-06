@@ -4,6 +4,7 @@ import com.electrahub.gateway.config.HttpClientConfig.GatewayHttpClientPropertie
 import com.electrahub.gateway.security.GatewayAccessScope;
 import com.electrahub.gateway.security.GatewayAccessScopeHeaderSigner;
 import com.electrahub.gateway.security.GatewayAccessScopeResolver;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -25,14 +26,20 @@ class GatewayProxyControllerIdentityTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-ElectraHub-User-Id", "spoofed-user");
         request.addHeader("X-ElectraHub-Tenant-Id", "spoofed-tenant");
+        request.addHeader("X-ElectraHub-Identity-Context", "spoofed-context");
+        request.addHeader("X-ElectraHub-Identity-Context-Signature", "spoofed-signature");
         request.addHeader("X-Client-Version", "1.0");
         request.setAttribute("uid", "trusted-user");
+        request.setAttribute("tenantId", "tenant-a");
+        request.setAttribute("roles", java.util.List.of("DRIVER"));
         HttpHeaders downstream = new HttpHeaders();
 
         copyHeaders(controller, request, downstream);
 
         assertThat(downstream.getFirst("X-ElectraHub-User-Id")).isEqualTo("trusted-user");
-        assertThat(downstream.getFirst("X-ElectraHub-Tenant-Id")).isEqualTo("electrahub");
+        assertThat(downstream.getFirst("X-ElectraHub-Tenant-Id")).isEqualTo("tenant-a");
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context")).isNotEqualTo("spoofed-context");
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context-Signature")).isNotEqualTo("spoofed-signature");
         assertThat(downstream.getFirst("X-Client-Version")).isEqualTo("1.0");
     }
 
@@ -48,6 +55,23 @@ class GatewayProxyControllerIdentityTest {
 
         assertThat(downstream.getFirst("X-ElectraHub-User-Id")).isNull();
         assertThat(downstream.getFirst("X-ElectraHub-Tenant-Id")).isNull();
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context")).isNull();
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context-Signature")).isNull();
+    }
+
+    @Test
+    void usesLegacyDefaultTenantWhenTokenHasNoTenantClaim() throws Exception {
+        GatewayProxyController controller = controller();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("uid", "legacy-user");
+        request.setAttribute("roles", java.util.List.of("DRIVER"));
+        HttpHeaders downstream = new HttpHeaders();
+
+        copyHeaders(controller, request, downstream);
+
+        assertThat(downstream.getFirst("X-ElectraHub-Tenant-Id")).isEqualTo("electrahub");
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context")).isNotBlank();
+        assertThat(downstream.getFirst("X-ElectraHub-Identity-Context-Signature")).isNotBlank();
     }
 
     @Test
@@ -97,7 +121,10 @@ class GatewayProxyControllerIdentityTest {
                         Duration.ofSeconds(1),
                         Duration.ofSeconds(1)),
                 mock(GatewayAccessScopeResolver.class),
-                mock(GatewayAccessScopeHeaderSigner.class),
+                new GatewayAccessScopeHeaderSigner(
+                        new ObjectMapper(),
+                        "test-access-context-secret",
+                        "test"),
                 "electrahub"
         );
     }

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -110,6 +111,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 request.setAttribute("jti", parsed.jti());
                 request.setAttribute("exp", parsed.exp());
                 request.setAttribute("tv", parsed.tv());
+                request.setAttribute("roles", List.copyOf(parsed.roles()));
+                if (parsed.tenantId() != null && !parsed.tenantId().isBlank()) {
+                    request.setAttribute("tenantId", parsed.tenantId().trim());
+                }
 
                 log.debug("JWT accepted: uid={} subject={} roles={} path={}",
                         parsed.uid(), parsed.subjectEmail(), parsed.roles(), request.getRequestURI());

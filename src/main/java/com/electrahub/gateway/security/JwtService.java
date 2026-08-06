@@ -27,7 +27,19 @@ public class JwtService {
         this.issuer = issuer;
     }
 
-    public record ParsedToken(String subjectEmail, String jti, String uid, long tv, Date exp, List<String> roles) {}
+    public record ParsedToken(
+            String subjectEmail,
+            String jti,
+            String uid,
+            long tv,
+            Date exp,
+            List<String> roles,
+            String tenantId
+    ) {
+        public ParsedToken(String subjectEmail, String jti, String uid, long tv, Date exp, List<String> roles) {
+            this(subjectEmail, jti, uid, tv, exp, roles, null);
+        }
+    }
 
     /**
      * Executes parse and validate for `JwtService`.
@@ -68,7 +80,8 @@ public class JwtService {
                 String.valueOf(c.get("uid")),
                 tv,
                 c.getExpiration(),
-                roles
+                roles,
+                c.get("tid") == null ? null : String.valueOf(c.get("tid"))
         );
     }
 

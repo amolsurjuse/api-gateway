@@ -84,4 +84,29 @@ class GatewayAccessScopeHeaderSignerTest {
         assertThat(body).containsEntry("readLocationIds", java.util.List.of("LOC-1"));
         assertThat(body).doesNotContainKey("version");
     }
+
+    @Test
+    void signsShortLivedTenantIdentityContext() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        GatewayAccessScopeHeaderSigner signer = new GatewayAccessScopeHeaderSigner(
+                objectMapper,
+                "test-access-context-secret",
+                "test"
+        );
+        Instant expiresAt = Instant.now().plusSeconds(60);
+
+        String payload = signer.identityPayload(
+                "user-1", "tenant-a", java.util.List.of("DRIVER"), expiresAt);
+        Map<String, Object> body = objectMapper.readValue(
+                Base64.getUrlDecoder().decode(payload),
+                new TypeReference<>() { }
+        );
+
+        assertThat(body).containsEntry("version", 1);
+        assertThat(body).containsEntry("userId", "user-1");
+        assertThat(body).containsEntry("tenantId", "tenant-a");
+        assertThat(body).containsEntry("roles", java.util.List.of("DRIVER"));
+        assertThat(body).containsEntry("expiresAt", expiresAt.toEpochMilli());
+        assertThat(signer.signature(payload)).isNotBlank();
+    }
 }

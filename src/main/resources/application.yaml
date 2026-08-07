@@ -125,6 +125,11 @@ app:
         path-pattern: "/swagger-ui.html"
         effect: ALLOW
         allow-anonymous: true
+      - name: ocpi-protocol
+        methods: [ "*" ]
+        path-pattern: "/ocpi/**"
+        effect: ALLOW
+        allow-anonymous: true
       - name: auth-login
         methods: [ "POST" ]
         path-pattern: "/auth/api/auth/login"
@@ -516,6 +521,7 @@ gateway:
     charger-management: ${GATEWAY_ROUTES_CHARGER_MANAGEMENT:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}
     charger: ${GATEWAY_ROUTES_CHARGER:${GATEWAY_ROUTE_CHARGER:${GATEWAY_ROUTE_CHARGER_MANAGEMENT:http://charger-management-service:8086}}}
     ocpp: ${GATEWAY_ROUTES_OCPP:${GATEWAY_ROUTE_OCPP:http://ocpp-service:8082}}
+    ocpi: ${GATEWAY_ROUTES_OCPI:${GATEWAY_ROUTE_OCPI:http://ocpi-service:8084/ocpi}}
     ws-connector: ${GATEWAY_ROUTES_WS_CONNECTOR:${GATEWAY_ROUTE_WS_CONNECTOR:http://web-socket-connector:8091}}
     pricing: ${GATEWAY_ROUTES_PRICING:${GATEWAY_ROUTE_PRICING:http://pricing-service:8092}}
     terms: ${GATEWAY_ROUTES_TERMS:${GATEWAY_ROUTE_TERMS:${GATEWAY_ROUTE_USER:http://user-service:8082}}}

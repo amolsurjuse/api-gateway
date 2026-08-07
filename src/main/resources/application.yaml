@@ -125,11 +125,6 @@ app:
         path-pattern: "/swagger-ui.html"
         effect: ALLOW
         allow-anonymous: true
-      - name: ocpi-protocol
-        methods: [ "*" ]
-        path-pattern: "/ocpi/**"
-        effect: ALLOW
-        allow-anonymous: true
       - name: auth-login
         methods: [ "POST" ]
         path-pattern: "/auth/api/auth/login"

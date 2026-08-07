@@ -78,6 +78,21 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void preservesOpaqueOcpiTokenForTheProtocolBackend() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ocpi/2.2.1/cdrs");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Token partner-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(chain.getRequest()).isSameAs(request);
+        assertThat(request.getHeader(HttpHeaders.AUTHORIZATION)).isEqualTo("Token partner-token");
+        assertThat(response.getStatus()).isEqualTo(MockHttpServletResponse.SC_OK);
+        verify(jwtService, never()).parseAndValidate("partner-token");
+    }
+
+    @Test
     void returns401WhenTokenParsingFails() throws Exception {
         String token = "malformed-token";
         when(jwtService.parseAndValidate(token)).thenThrow(new RuntimeException("JWT parse failed"));

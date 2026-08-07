@@ -91,6 +91,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/internal/rbac/cache/**").permitAll()
+                        // OCPI uses its own opaque Token scheme. The OCPI service is the
+                        // fail-closed authorization boundary for every protocol endpoint.
+                        .requestMatchers("/ocpi/**").permitAll()
                         .anyRequest().access(apiPolicyAuthorizationManager)
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

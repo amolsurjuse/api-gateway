@@ -6,11 +6,15 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "spring.data.redis.host=localhost",
         "spring.data.redis.port=6379",
@@ -20,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "app.redis.token-version-prefix=tv:",
         "gateway.routes.auth=http://localhost:8080",
         "gateway.routes.user=http://localhost:8082",
+        "gateway.routes.ocpi=http://127.0.0.1:1/ocpi",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
 })
 class ApiGatewayApplicationTests {
@@ -27,6 +32,9 @@ class ApiGatewayApplicationTests {
 
     @Autowired
     private RbacProperties rbacProperties;
+
+    @Autowired
+    private MockMvc mockMvc;
 
 
     /**
@@ -51,5 +59,17 @@ class ApiGatewayApplicationTests {
                     assertThat(rule.getRequiredRoles()).containsExactly("SYSTEM_ADMIN");
                     assertThat(rule.isAllowAnonymous()).isFalse();
                 });
+    }
+
+    @Test
+    void ocpiProtocolBypassesJwtRbacAndReachesTheProtocolBackend() throws Exception {
+        int status = mockMvc.perform(get("/ocpi/versions"))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+
+        // The test backend is deliberately unreachable. Any downstream error is
+        // acceptable here; a gateway 401/403 would prove OCPI was intercepted.
+        assertThat(status).isNotIn(401, 403);
     }
 }

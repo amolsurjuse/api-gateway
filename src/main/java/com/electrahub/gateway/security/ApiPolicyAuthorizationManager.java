@@ -191,11 +191,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return path.equals("/user/api/v1/users")
                 || path.startsWith("/user/api/v1/users/")
                 || path.equals("/user/api/v1/admin/users")
-                || path.startsWith("/user/api/v1/admin/users/")
-                || path.equals("/billing/api/v1/admin/analytics/users")
-                || path.startsWith("/billing/api/v1/admin/analytics/users/")
-                || path.equals("/billing/api/v1/admin/analytics/reports")
-                || path.startsWith("/billing/api/v1/admin/analytics/reports/");
+                || path.startsWith("/user/api/v1/admin/users/");
     }
 
     /**

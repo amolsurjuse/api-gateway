@@ -30,6 +30,51 @@ import static org.mockito.Mockito.when;
 class GatewayAccessScopeResolverTest {
 
     @Test
+    void givesGlobalReadScopeToReadOnlyAdminWithoutLocationExpansion() {
+        UUID actorId = UUID.randomUUID();
+        RouteRegistry routeRegistry = new RouteRegistry();
+        routeRegistry.setRoutes(Map.of(
+                "user", "http://user-service",
+                "charger-management", "http://charger-service"
+        ));
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GatewayAccessScopeCache scopeCache = mock(GatewayAccessScopeCache.class);
+        when(scopeCache.lookup(eq(actorId), eq("1"), eq("readonly-token")))
+                .thenReturn(GatewayAccessScopeCache.Lookup.miss("0", "0:" + "r".repeat(43)));
+        when(scopeCache.store(eq(actorId), eq("1"), eq("readonly-token"), eq("0"), any(GatewayAccessScope.class)))
+                .thenReturn(GatewayAccessScopeCache.StoreResult.STORED);
+        GatewayAccessScopeResolver resolver = new GatewayAccessScopeResolver(
+                routeRegistry,
+                builder,
+                new GatewayAccessScopeHeaderSigner(new ObjectMapper(), "test-access-context-secret", "test"),
+                scopeCache,
+                Duration.ofSeconds(30)
+        );
+
+        server.expect(once(), requestTo("http://user-service/api/v1/admin/access/me"))
+                .andExpect(method(GET))
+                .andRespond(withSuccess("""
+                        {"actorId":"%s","systemAdmin":false,"grants":[]}
+                        """.formatted(actorId), MediaType.APPLICATION_JSON));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute("uid", actorId.toString());
+        request.setAttribute("tv", "1");
+        request.setAttribute("jti", "readonly-token");
+        request.setAttribute("roles", java.util.List.of("USER", "ADMIN_READ_ONLY"));
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer readonly-token");
+
+        GatewayAccessScope scope = resolver.resolve(request);
+
+        assertThat(scope.systemAdmin()).isTrue();
+        assertThat(scope.operateEnterpriseIds()).isEmpty();
+        assertThat(scope.operateNetworkIds()).isEmpty();
+        assertThat(scope.operateLocationIds()).isEmpty();
+        server.verify();
+    }
+
+    @Test
     void signsAnEmptyScopeForAnAdminWithoutGrants() {
         UUID actorId = UUID.randomUUID();
         RouteRegistry routeRegistry = new RouteRegistry();

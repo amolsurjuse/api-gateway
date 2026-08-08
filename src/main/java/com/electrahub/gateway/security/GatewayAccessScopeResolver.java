@@ -42,6 +42,7 @@ public class GatewayAccessScopeResolver {
 
     public GatewayAccessScope resolve(HttpServletRequest request) {
         UUID actorId = requireActorId(request);
+        boolean globalReadOnlyAdmin = hasRole(request, "ADMIN_READ_ONLY") && !hasRole(request, "SYSTEM_ADMIN");
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(authorization)) {
             throw forbidden("An authenticated administrative session is required.");
@@ -51,7 +52,7 @@ public class GatewayAccessScopeResolver {
         Object tokenId = request.getAttribute("jti");
         GatewayAccessScopeCache.Lookup lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
         if (lookup == null) {
-            return resolveFreshScope(actorId, authorization);
+            return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin);
         }
         if (lookup.scope().isPresent()) {
             return lookup.scope().orElseThrow()
@@ -60,7 +61,7 @@ public class GatewayAccessScopeResolver {
         }
 
         for (int attempt = 0; attempt < 2; attempt++) {
-            GatewayAccessScope expanded = resolveFreshScope(actorId, authorization);
+            GatewayAccessScope expanded = resolveFreshScope(actorId, authorization, globalReadOnlyAdmin);
             GatewayAccessScopeCache.StoreResult stored = scopeCache.store(
                     actorId,
                     tokenVersion,
@@ -76,7 +77,7 @@ public class GatewayAccessScopeResolver {
             }
             lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
             if (lookup == null) {
-                return resolveFreshScope(actorId, authorization);
+                return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin);
             }
             if (lookup.scope().isPresent()) {
                 return lookup.scope().orElseThrow()
@@ -87,13 +88,26 @@ public class GatewayAccessScopeResolver {
         throw unavailable("Administrative access changed while resolving its scope. Please retry the request.");
     }
 
-    private GatewayAccessScope resolveFreshScope(UUID actorId, String authorization) {
+    private GatewayAccessScope resolveFreshScope(UUID actorId, String authorization, boolean globalReadOnlyAdmin) {
         UserAccessContext userContext = readUserContext(authorization);
         if (!actorId.equals(userContext.actorId())) {
             throw forbidden("The administrative access context did not match the authenticated user.");
         }
 
         GatewayAccessScope rootScope = buildRootScope(userContext);
+        if (globalReadOnlyAdmin) {
+            return new GatewayAccessScope(
+                    rootScope.actorId(),
+                    true,
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    expiresAt()
+            );
+        }
         // A scoped administrator without grants must see no tenant data, not an
         // authorization error. Downstream services treat the signed empty scope
         // as an empty result for reads and deny every operational mutation.
@@ -207,6 +221,16 @@ public class GatewayAccessScopeResolver {
         } catch (IllegalArgumentException ex) {
             throw forbidden("The authenticated user identity is invalid.");
         }
+    }
+
+    private boolean hasRole(HttpServletRequest request, String expectedRole) {
+        Object value = request.getAttribute("roles");
+        if (!(value instanceof List<?> roles)) {
+            return false;
+        }
+        return roles.stream()
+                .map(String::valueOf)
+                .anyMatch(role -> expectedRole.equalsIgnoreCase(role));
     }
 
     private Instant expiresAt() {

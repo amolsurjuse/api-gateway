@@ -132,6 +132,30 @@ class ApiPolicyAuthorizationManagerTest {
     }
 
     @Test
+    void readOnlyAdminCanGetEveryNonUserAdminApiButCannotMutateAnyApi() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                rule("system-admin-only", List.of("*"), "/payment-gateway/api/v1/gateway/admin/**", false, List.of("SYSTEM_ADMIN")),
+                rule("user-service", List.of("*"), "/user/**", false, List.of("USER"))
+        ));
+
+        var manager = manager(properties);
+
+        assertTrue(authorize(manager, "GET", "/payment-gateway/api/v1/gateway/admin/configuration",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertTrue(authorize(manager, "HEAD", "/pricing/api/v1/plans",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "POST", "/payment-gateway/api/v1/gateway/admin/connections",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "PUT", "/pricing/api/v1/plans/plan-1",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "PATCH", "/notifications/api/v1/inbox/notification-1",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+        assertFalse(authorize(manager, "DELETE", "/charger/api/v1/admin/chargers/charger-1",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY", "USER")).isGranted());
+    }
+
+    @Test
     void roleScopedDenyDoesNotBlockSystemAdminWrites() {
         var properties = new RbacProperties();
         properties.setRules(List.of(

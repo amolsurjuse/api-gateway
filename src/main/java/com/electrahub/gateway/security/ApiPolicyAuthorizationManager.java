@@ -29,6 +29,7 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
 
     private static final Logger log = LoggerFactory.getLogger(ApiPolicyAuthorizationManager.class);
     private static final String ROLE_PREFIX = "ROLE_";
+    private static final Set<String> SAFE_READ_ONLY_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
     private final RbacPolicySnapshotProvider policySnapshotProvider;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
@@ -57,6 +58,24 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         String method = request.getMethod().toUpperCase(Locale.ROOT);
         String path = request.getRequestURI();
         Authentication authentication = null;
+
+        Authentication candidate = authenticationSupplier.get();
+        if (isReadOnlyAdmin(candidate, currentPolicy.roleHierarchy())) {
+            if (!SAFE_READ_ONLY_METHODS.contains(method)) {
+                log.debug("RBAC decision: method={} path={} principal={} granted=false reason=read-only-method",
+                        method, path, principal(candidate));
+                return new AuthorizationDecision(false);
+            }
+            if (isRestrictedReadOnlyPath(path)) {
+                log.debug("RBAC decision: method={} path={} principal={} granted=false reason=read-only-sensitive-data",
+                        method, path, principal(candidate));
+                return new AuthorizationDecision(false);
+            }
+            log.debug("RBAC decision: method={} path={} principal={} granted=true reason=read-only-safe-method",
+                    method, path, principal(candidate));
+            return new AuthorizationDecision(true);
+        }
+
         boolean matchedAnyRule = false;
         boolean grantedByAllowRule = false;
 
@@ -158,6 +177,25 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         return authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
+    }
+
+    private boolean isReadOnlyAdmin(Authentication authentication, RoleHierarchy roleHierarchy) {
+        if (isAnonymous(authentication)) {
+            return false;
+        }
+        Set<String> roles = extractRoles(authentication, roleHierarchy);
+        return roles.contains("ADMIN_READ_ONLY") && !roles.contains("SYSTEM_ADMIN");
+    }
+
+    private boolean isRestrictedReadOnlyPath(String path) {
+        return path.equals("/user/api/v1/users")
+                || path.startsWith("/user/api/v1/users/")
+                || path.equals("/user/api/v1/admin/users")
+                || path.startsWith("/user/api/v1/admin/users/")
+                || path.equals("/billing/api/v1/admin/analytics/users")
+                || path.startsWith("/billing/api/v1/admin/analytics/users/")
+                || path.equals("/billing/api/v1/admin/analytics/reports")
+                || path.startsWith("/billing/api/v1/admin/analytics/reports/");
     }
 
     /**

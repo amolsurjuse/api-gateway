@@ -66,6 +66,24 @@ class ApiGatewayApplicationTests {
     }
 
     @Test
+    void rootCaCeremonySeparatesReadOnlyReadsFromSystemAdminWrites() {
+        assertThat(rbacProperties.getRules())
+                .filteredOn(rule -> "pnc-root-ca-read".equals(rule.getName()))
+                .singleElement()
+                .satisfies(rule -> {
+                    assertThat(rule.getMethods()).containsExactly("GET");
+                    assertThat(rule.getRequiredRoles()).containsExactly("SYSTEM_ADMIN", "ADMIN_READ_ONLY");
+                });
+        assertThat(rbacProperties.getRules())
+                .filteredOn(rule -> "pnc-root-ca-write".equals(rule.getName()))
+                .singleElement()
+                .satisfies(rule -> {
+                    assertThat(rule.getMethods()).containsExactly("POST");
+                    assertThat(rule.getRequiredRoles()).containsExactly("SYSTEM_ADMIN");
+                });
+    }
+
+    @Test
     void taxAdministrationIsRestrictedToSystemAdministrators() {
         assertThat(rbacProperties.getRules())
                 .filteredOn(rule -> "pricing-tax-admin".equals(rule.getName()))

@@ -210,6 +210,26 @@ app:
         path-pattern: "/pnc/api/v1/admin/mobility-contracts"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-root-ca-read
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/root-ca-ceremonies"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-root-ca-read-child
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/root-ca-ceremonies/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-root-ca-write
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/root-ca-ceremonies"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pnc-root-ca-write-child
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/root-ca-ceremonies/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: terms-authenticated
         methods: [ "GET", "POST" ]
         path-pattern: "/terms/api/v1/terms/**"

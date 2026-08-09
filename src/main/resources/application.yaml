@@ -205,6 +205,11 @@ app:
         path-pattern: "/ai/**"
         effect: ALLOW
         required-roles: [ "USER" ]
+      - name: pnc-mobility-contract-admin-read
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/mobility-contracts"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
       - name: terms-authenticated
         methods: [ "GET", "POST" ]
         path-pattern: "/terms/api/v1/terms/**"
@@ -507,6 +512,7 @@ gateway:
     notifications: ${GATEWAY_ROUTES_NOTIFICATIONS:${GATEWAY_ROUTE_NOTIFICATIONS:http://notification-service:8085/notifications}}
     ai: ${GATEWAY_ROUTES_AI:${GATEWAY_ROUTE_AI:http://ai-support-service:8094}}
     community-voting: ${GATEWAY_ROUTES_COMMUNITY_VOTING:${GATEWAY_ROUTE_COMMUNITY_VOTING:http://community-voting-service:8080}}
+    pnc: ${GATEWAY_ROUTES_PNC:${GATEWAY_ROUTE_PNC:http://plug-and-charge-platform:8098}}
 
 grpc:
   client:

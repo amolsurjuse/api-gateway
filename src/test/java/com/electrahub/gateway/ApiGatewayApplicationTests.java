@@ -1,6 +1,7 @@
 package com.electrahub.gateway;
 
 import com.electrahub.gateway.config.RbacProperties;
+import com.electrahub.gateway.route.RouteRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -36,6 +37,9 @@ class ApiGatewayApplicationTests {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private RouteRegistry routeRegistry;
+
 
     /**
      * Executes context loads for `ApiGatewayApplicationTests`.
@@ -47,6 +51,18 @@ class ApiGatewayApplicationTests {
     void contextLoads() {
         LOGGER.info(" Entering ApiGatewayApplicationTests#contextLoads");
         LOGGER.debug(" Entering ApiGatewayApplicationTests#contextLoads with debug context");
+    }
+
+    @Test
+    void plugAndChargeAdminReadRouteIsRegistered() {
+        assertThat(routeRegistry.resolve("pnc")).isEqualTo("http://plug-and-charge-platform:8098");
+        assertThat(rbacProperties.getRules())
+                .filteredOn(rule -> "pnc-mobility-contract-admin-read".equals(rule.getName()))
+                .singleElement()
+                .satisfies(rule -> {
+                    assertThat(rule.getMethods()).containsExactly("GET");
+                    assertThat(rule.getRequiredRoles()).contains("SYSTEM_ADMIN", "ADMIN_READ_ONLY");
+                });
     }
 
     @Test

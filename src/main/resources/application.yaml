@@ -230,6 +230,46 @@ app:
         path-pattern: "/pnc/api/v1/admin/pki/root-ca-ceremonies/**"
         effect: ALLOW
         required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pnc-mo-subca-read
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/mo-subca-ceremonies"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-mo-subca-read-child
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/mo-subca-ceremonies/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-mo-subca-write
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/mo-subca-ceremonies"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pnc-mo-subca-write-child
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/mo-subca-ceremonies/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pnc-pcid-enrollment-read
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/pcid-enrollments"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-pcid-enrollment-read-child
+        methods: [ "GET" ]
+        path-pattern: "/pnc/api/v1/admin/pki/pcid-enrollments/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN", "ADMIN_READ_ONLY" ]
+      - name: pnc-pcid-enrollment-write
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/pcid-enrollments"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
+      - name: pnc-pcid-enrollment-write-child
+        methods: [ "POST" ]
+        path-pattern: "/pnc/api/v1/admin/pki/pcid-enrollments/**"
+        effect: ALLOW
+        required-roles: [ "SYSTEM_ADMIN" ]
       - name: terms-authenticated
         methods: [ "GET", "POST" ]
         path-pattern: "/terms/api/v1/terms/**"

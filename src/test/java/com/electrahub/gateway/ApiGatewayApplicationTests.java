@@ -84,6 +84,27 @@ class ApiGatewayApplicationTests {
     }
 
     @Test
+    void subordinateCaAndPcidRoutesSeparateReadsFromMutations() {
+        assertPncPkiRule("pnc-mo-subca-read", "GET", "SYSTEM_ADMIN", "ADMIN_READ_ONLY");
+        assertPncPkiRule("pnc-mo-subca-write", "POST", "SYSTEM_ADMIN");
+        assertPncPkiRule("pnc-pcid-enrollment-read", "GET", "SYSTEM_ADMIN", "ADMIN_READ_ONLY");
+        assertPncPkiRule("pnc-pcid-enrollment-write", "POST", "SYSTEM_ADMIN");
+        assertPncPkiRule("pnc-pcid-enrollment-read-child", "GET", "SYSTEM_ADMIN", "ADMIN_READ_ONLY");
+        assertPncPkiRule("pnc-pcid-enrollment-write-child", "POST", "SYSTEM_ADMIN");
+    }
+
+    private void assertPncPkiRule(String name, String method, String... roles) {
+        assertThat(rbacProperties.getRules())
+                .filteredOn(rule -> name.equals(rule.getName()))
+                .singleElement()
+                .satisfies(rule -> {
+                    assertThat(rule.getMethods()).containsExactly(method);
+                    assertThat(rule.getRequiredRoles()).containsExactly(roles);
+                    assertThat(rule.isAllowAnonymous()).isFalse();
+                });
+    }
+
+    @Test
     void taxAdministrationIsRestrictedToSystemAdministrators() {
         assertThat(rbacProperties.getRules())
                 .filteredOn(rule -> "pricing-tax-admin".equals(rule.getName()))

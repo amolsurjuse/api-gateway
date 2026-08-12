@@ -163,6 +163,7 @@ public class TermsAcceptanceGateFilter extends OncePerRequestFilter {
                 || path.equals("/auth/api/auth/refresh")
                 || path.startsWith("/auth/api/auth/logout")
                 || path.startsWith("/payment-gateway/api/v1/gateway/webhooks/")
+                || path.startsWith("/session/api/v1/sessions/public/ad-hoc/")
                 || path.equals("/session/api/v1/sessions/active/stream")
                 || path.startsWith("/actuator/")
                 || path.startsWith("/v3/api-docs/")

@@ -38,6 +38,7 @@ public class HttpExchangeLogger {
             "proxy-authorization",
             "x-api-key",
             "x-auth-token",
+            "x-ad-hoc-access-token",
             "x-csrf-token",
             "x-internal-api-key",
             "stripe-signature",
@@ -59,7 +60,7 @@ public class HttpExchangeLogger {
     );
 
     private static final Pattern JSON_SECRET_FIELD_PATTERN = Pattern.compile(
-            "(?i)(\"(?:accessToken|authorization|cardNumber|clientSecret|cvv|idToken|password|providerToken|refreshToken|secret|sessionData|token|tokenReference)\"\\s*:\\s*\")([^\"]*)(\")"
+            "(?i)(\"(?:accessToken|adHocAccessToken|authorization|cardNumber|clientSecret|cvv|idToken|password|providerToken|refreshToken|secret|sessionData|token|tokenReference)\"\\s*:\\s*\")([^\"]*)(\")"
     );
 
     private final boolean enabled;

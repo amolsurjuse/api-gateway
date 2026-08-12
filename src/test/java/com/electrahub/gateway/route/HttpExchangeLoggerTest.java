@@ -22,6 +22,7 @@ class HttpExchangeLoggerTest {
         request.setQueryString("email=user@example.com&access_token=query-secret");
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer header-secret");
         request.addHeader(HttpHeaders.COOKIE, "session=cookie-secret");
+        request.addHeader("X-Ad-Hoc-Access-Token", "adhoc-header-secret");
         request.setContentType("application/json");
 
         byte[] requestBody = """
@@ -31,7 +32,7 @@ class HttpExchangeLoggerTest {
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.add(HttpHeaders.SET_COOKIE, "refresh=refresh-secret");
         byte[] responseBody = """
-                {"accessToken":"response-secret","refreshToken":"refresh-secret"}
+                {"accessToken":"response-secret","refreshToken":"refresh-secret","adHocAccessToken":"adhoc-response-secret"}
                 """.getBytes(StandardCharsets.UTF_8);
 
         long startedAtNanos = logger.started();
@@ -46,6 +47,7 @@ class HttpExchangeLoggerTest {
         assertThat(output).contains("\"password\":\"***\"");
         assertThat(output).contains("\"accessToken\":\"***\"");
         assertThat(output).contains("\"refreshToken\":\"***\"");
+        assertThat(output).contains("\"adHocAccessToken\":\"***\"");
         assertThat(output).doesNotContain(
                 "query-secret",
                 "header-secret",
@@ -54,7 +56,9 @@ class HttpExchangeLoggerTest {
                 "access-secret",
                 "response-secret",
                 "refresh-secret",
-                "downstream-secret"
+                "downstream-secret",
+                "adhoc-header-secret",
+                "adhoc-response-secret"
         );
     }
 

@@ -14,6 +14,7 @@ public record GatewayAccessScope(
         Set<String> operateEnterpriseIds,
         Set<String> operateNetworkIds,
         Set<String> operateLocationIds,
+        Set<String> permissions,
         String scopeReference,
         Instant expiresAt
 ) {
@@ -37,9 +38,26 @@ public record GatewayAccessScope(
                 operateEnterpriseIds,
                 operateNetworkIds,
                 operateLocationIds,
+                Set.of(),
                 null,
                 expiresAt
         );
+    }
+
+    public GatewayAccessScope(
+            UUID actorId,
+            boolean systemAdmin,
+            Set<String> readEnterpriseIds,
+            Set<String> readNetworkIds,
+            Set<String> readLocationIds,
+            Set<String> operateEnterpriseIds,
+            Set<String> operateNetworkIds,
+            Set<String> operateLocationIds,
+            String scopeReference,
+            Instant expiresAt
+    ) {
+        this(actorId, systemAdmin, readEnterpriseIds, readNetworkIds, readLocationIds,
+                operateEnterpriseIds, operateNetworkIds, operateLocationIds, Set.of(), scopeReference, expiresAt);
     }
 
     public GatewayAccessScope {
@@ -49,6 +67,7 @@ public record GatewayAccessScope(
         operateEnterpriseIds = immutable(operateEnterpriseIds);
         operateNetworkIds = immutable(operateNetworkIds);
         operateLocationIds = immutable(operateLocationIds);
+        permissions = immutable(permissions);
     }
 
     public boolean hasReadScope() {
@@ -69,6 +88,7 @@ public record GatewayAccessScope(
                 operateEnterpriseIds,
                 operateNetworkIds,
                 operateLocationIds,
+                permissions,
                 scopeReference,
                 newExpiresAt
         );
@@ -84,9 +104,15 @@ public record GatewayAccessScope(
                 operateEnterpriseIds,
                 operateNetworkIds,
                 operateLocationIds,
+                permissions,
                 newScopeReference,
                 expiresAt
         );
+    }
+
+    public GatewayAccessScope withPermissions(Set<String> newPermissions) {
+        return new GatewayAccessScope(actorId, systemAdmin, readEnterpriseIds, readNetworkIds, readLocationIds,
+                operateEnterpriseIds, operateNetworkIds, operateLocationIds, newPermissions, scopeReference, expiresAt);
     }
 
     private static Set<String> immutable(Set<String> values) {

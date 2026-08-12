@@ -100,6 +100,7 @@ public class GatewayAccessScopeHeaderSigner {
                     "operateEnterpriseIds", scope.operateEnterpriseIds(),
                     "operateNetworkIds", scope.operateNetworkIds(),
                     "operateLocationIds", scope.operateLocationIds(),
+                    "permissions", scope.permissions(),
                     "expiresAt", scope.expiresAt().toEpochMilli()
             );
             return Base64.getUrlEncoder().withoutPadding()
@@ -116,6 +117,7 @@ public class GatewayAccessScopeHeaderSigner {
                     "actorId", scope.actorId().toString(),
                     "systemAdmin", scope.systemAdmin(),
                     "scopeRef", scope.scopeReference(),
+                    "permissions", scope.permissions(),
                     "expiresAt", scope.expiresAt().toEpochMilli()
             );
             return Base64.getUrlEncoder().withoutPadding()

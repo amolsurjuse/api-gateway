@@ -34,7 +34,7 @@ class GatewayAccessScopeHeaderSignerTest {
                 Set.of(),
                 "5:" + "a".repeat(43),
                 Instant.now().plusSeconds(30)
-        );
+        ).withPermissions(Set.of("ANALYTICS_DRIVER_PII_READ"));
 
         String payload = signer.payload(scope);
         Map<String, Object> body = objectMapper.readValue(
@@ -44,6 +44,7 @@ class GatewayAccessScopeHeaderSignerTest {
 
         assertThat(body).containsEntry("version", 2);
         assertThat(body).containsEntry("scopeRef", scope.scopeReference());
+        assertThat(body).containsEntry("permissions", java.util.List.of("ANALYTICS_DRIVER_PII_READ"));
         assertThat(body).doesNotContainKeys(
                 "readEnterpriseIds",
                 "readNetworkIds",
@@ -73,7 +74,7 @@ class GatewayAccessScopeHeaderSignerTest {
                 Set.of(),
                 Set.of(),
                 Instant.now().plusSeconds(30)
-        );
+        ).withPermissions(Set.of("ANALYTICS_DRIVER_PII_READ"));
 
         String payload = signer.payload(scope);
         Map<String, Object> body = objectMapper.readValue(
@@ -82,6 +83,7 @@ class GatewayAccessScopeHeaderSignerTest {
         );
 
         assertThat(body).containsEntry("readLocationIds", java.util.List.of("LOC-1"));
+        assertThat(body).containsEntry("permissions", java.util.List.of("ANALYTICS_DRIVER_PII_READ"));
         assertThat(body).doesNotContainKey("version");
     }
 

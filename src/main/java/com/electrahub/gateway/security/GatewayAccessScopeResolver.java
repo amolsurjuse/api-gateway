@@ -20,6 +20,8 @@ import java.util.UUID;
 @Component
 public class GatewayAccessScopeResolver {
 
+    private static final String ANALYTICS_DRIVER_PII_READ = "ANALYTICS_DRIVER_PII_READ";
+
     private final RouteRegistry routeRegistry;
     private final RestClient restClient;
     private final GatewayAccessScopeHeaderSigner signer;
@@ -43,6 +45,7 @@ public class GatewayAccessScopeResolver {
     public GatewayAccessScope resolve(HttpServletRequest request) {
         UUID actorId = requireActorId(request);
         boolean globalReadOnlyAdmin = hasRole(request, "ADMIN_READ_ONLY") && !hasRole(request, "SYSTEM_ADMIN");
+        Set<String> permissions = permissions(request);
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(authorization)) {
             throw forbidden("An authenticated administrative session is required.");
@@ -52,12 +55,13 @@ public class GatewayAccessScopeResolver {
         Object tokenId = request.getAttribute("jti");
         GatewayAccessScopeCache.Lookup lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
         if (lookup == null) {
-            return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin);
+            return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin).withPermissions(permissions);
         }
         if (lookup.scope().isPresent()) {
             return lookup.scope().orElseThrow()
                     .withExpiresAt(expiresAt())
-                    .withScopeReference(lookup.scopeReference());
+                    .withScopeReference(lookup.scopeReference())
+                    .withPermissions(permissions);
         }
 
         for (int attempt = 0; attempt < 2; attempt++) {
@@ -70,19 +74,20 @@ public class GatewayAccessScopeResolver {
                     expanded
             );
             if (stored == GatewayAccessScopeCache.StoreResult.STORED) {
-                return expanded.withScopeReference(lookup.scopeReference());
+                return expanded.withScopeReference(lookup.scopeReference()).withPermissions(permissions);
             }
             if (stored == GatewayAccessScopeCache.StoreResult.UNAVAILABLE) {
-                return expanded;
+                return expanded.withPermissions(permissions);
             }
             lookup = scopeCache.lookup(actorId, tokenVersion, tokenId);
             if (lookup == null) {
-                return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin);
+                return resolveFreshScope(actorId, authorization, globalReadOnlyAdmin).withPermissions(permissions);
             }
             if (lookup.scope().isPresent()) {
                 return lookup.scope().orElseThrow()
                         .withExpiresAt(expiresAt())
-                        .withScopeReference(lookup.scopeReference());
+                        .withScopeReference(lookup.scopeReference())
+                        .withPermissions(permissions);
             }
         }
         throw unavailable("Administrative access changed while resolving its scope. Please retry the request.");
@@ -231,6 +236,15 @@ public class GatewayAccessScopeResolver {
         return roles.stream()
                 .map(String::valueOf)
                 .anyMatch(role -> expectedRole.equalsIgnoreCase(role));
+    }
+
+    private Set<String> permissions(HttpServletRequest request) {
+        boolean permitted = hasRole(request, "SYSTEM_ADMIN")
+                || hasRole(request, "ADMIN_READ_ONLY")
+                || hasRole(request, "ENTERPRISE")
+                || hasRole(request, "NETWORK")
+                || hasRole(request, "LOCATION");
+        return permitted ? Set.of(ANALYTICS_DRIVER_PII_READ) : Set.of();
     }
 
     private Instant expiresAt() {

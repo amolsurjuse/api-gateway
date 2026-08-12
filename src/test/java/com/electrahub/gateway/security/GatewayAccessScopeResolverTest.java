@@ -157,6 +157,7 @@ class GatewayAccessScopeResolverTest {
         request.setAttribute("uid", actorId.toString());
         request.setAttribute("tv", "4");
         request.setAttribute("jti", "token-4");
+        request.setAttribute("roles", java.util.List.of("LOCATION"));
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token-4");
 
         GatewayAccessScope scope = resolver.resolve(request);
@@ -164,5 +165,6 @@ class GatewayAccessScopeResolverTest {
         assertThat(scope.readLocationIds()).containsExactly("LOCATION-1");
         assertThat(scope.expiresAt()).isAfter(Instant.now());
         assertThat(scope.scopeReference()).isEqualTo("3:" + "b".repeat(43));
+        assertThat(scope.permissions()).containsExactly("ANALYTICS_DRIVER_PII_READ");
     }
 }

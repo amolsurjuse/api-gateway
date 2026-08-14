@@ -13,6 +13,7 @@ import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,6 +52,19 @@ class ApiGatewayApplicationTests {
     void contextLoads() {
         LOGGER.info(" Entering ApiGatewayApplicationTests#contextLoads");
         LOGGER.debug(" Entering ApiGatewayApplicationTests#contextLoads with debug context");
+    }
+
+    @Test
+    void actuatorHealthAndPrometheusRemainAvailableWithoutAuthentication() throws Exception {
+        int healthStatus = mockMvc.perform(get("/actuator/health"))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+        // A dependency may make aggregate health return 503 in an isolated
+        // test, but the endpoint must never be intercepted by gateway auth.
+        assertThat(healthStatus).isNotIn(401, 403);
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isOk());
     }
 
     @Test

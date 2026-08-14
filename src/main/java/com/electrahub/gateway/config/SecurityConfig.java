@@ -91,6 +91,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/internal/rbac/cache/**").permitAll()
+                        // Monitoring must not depend on a mutable remote RBAC snapshot.
+                        // Actuator exposure remains limited by management endpoint config.
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/prometheus"
+                        ).permitAll()
                         // OCPI uses its own opaque Token scheme. The OCPI service is the
                         // fail-closed authorization boundary for every protocol endpoint.
                         .requestMatchers("/ocpi/**").permitAll()

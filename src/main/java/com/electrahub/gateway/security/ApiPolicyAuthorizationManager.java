@@ -61,6 +61,11 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
 
         Authentication candidate = authenticationSupplier.get();
         if (isReadOnlyAdmin(candidate, currentPolicy.roleHierarchy())) {
+            if (isReadOnlyAiChat(method, path)) {
+                log.debug("RBAC decision: method={} path={} principal={} granted=true reason=read-only-ai-chat",
+                        method, path, principal(candidate));
+                return new AuthorizationDecision(true);
+            }
             if (!SAFE_READ_ONLY_METHODS.contains(method)) {
                 log.debug("RBAC decision: method={} path={} principal={} granted=false reason=read-only-method",
                         method, path, principal(candidate));
@@ -192,6 +197,10 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                 || path.startsWith("/user/api/v1/users/")
                 || path.equals("/user/api/v1/admin/users")
                 || path.startsWith("/user/api/v1/admin/users/");
+    }
+
+    private boolean isReadOnlyAiChat(String method, String path) {
+        return "POST".equals(method) && "/ai/api/v1/chat/messages".equals(path);
     }
 
     /**

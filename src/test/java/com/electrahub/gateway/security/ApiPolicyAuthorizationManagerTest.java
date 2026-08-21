@@ -132,6 +132,24 @@ class ApiPolicyAuthorizationManagerTest {
     }
 
     @Test
+    void readOnlyAdminCanPostOnlyToAiChat() {
+        var properties = new RbacProperties();
+        properties.setRules(List.of(
+                rule("ai-support-service", List.of("*"), "/ai/**", false,
+                        List.of("SYSTEM_ADMIN", "ADMIN_READ_ONLY"))
+        ));
+        var manager = manager(properties);
+
+        var chat = authorize(manager, "POST", "/ai/api/v1/chat/messages",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY"));
+        var otherWrite = authorize(manager, "POST", "/ai/api/v1/admin/mutations",
+                () -> authenticationWithRoles("ADMIN_READ_ONLY"));
+
+        assertTrue(chat.isGranted());
+        assertFalse(otherWrite.isGranted());
+    }
+
+    @Test
     void readOnlyAdminCanGetEveryNonUserAdminApiButCannotMutateAnyApi() {
         var properties = new RbacProperties();
         properties.setRules(List.of(

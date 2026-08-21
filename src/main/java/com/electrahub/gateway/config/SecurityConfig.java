@@ -75,6 +75,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
+            AiRateLimitFilter aiRateLimitFilter,
             TermsAcceptanceGateFilter termsAcceptanceGateFilter,
             ApiPolicyAuthorizationManager apiPolicyAuthorizationManager
     ) throws Exception {
@@ -94,6 +95,7 @@ public class SecurityConfig {
                         .anyRequest().access(apiPolicyAuthorizationManager)
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(aiRateLimitFilter, JwtAuthFilter.class)
                 .addFilterAfter(termsAcceptanceGateFilter, JwtAuthFilter.class);
 
         return http.build();

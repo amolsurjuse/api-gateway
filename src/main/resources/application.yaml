@@ -42,6 +42,12 @@ management:
       endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 app:
+  rate-limit:
+    ai:
+      enabled: ${GATEWAY_AI_RATE_LIMIT_ENABLED:true}
+      path-prefix: ${GATEWAY_AI_RATE_LIMIT_PATH_PREFIX:/ai/}
+      requests-per-second: ${GATEWAY_AI_RATE_LIMIT_REQUESTS_PER_SECOND:2}
+      key-prefix: ${GATEWAY_AI_RATE_LIMIT_KEY_PREFIX:rate:ai:}
   security:
     jwt:
       issuer: ${APP_SECURITY_JWT_ISSUER:auth-service}
@@ -204,7 +210,7 @@ app:
         methods: [ "*" ]
         path-pattern: "/ai/**"
         effect: ALLOW
-        required-roles: [ "USER" ]
+        required-roles: [ "USER", "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
       - name: terms-authenticated
         methods: [ "GET", "POST" ]
         path-pattern: "/terms/api/v1/terms/**"

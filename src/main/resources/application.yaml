@@ -216,6 +216,51 @@ app:
         path-pattern: "/ai/**"
         effect: ALLOW
         required-roles: [ "USER", "SYSTEM_ADMIN", "ADMIN_READ_ONLY", "ENTERPRISE", "NETWORK", "LOCATION" ]
+      - name: support-session-read
+        methods: [ "GET" ]
+        path-pattern: "/session/api/v1/sessions/admin/**"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-ai-chat
+        methods: [ "POST" ]
+        path-pattern: "/ai/api/v1/chat/messages"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-ai-stream
+        methods: [ "GET" ]
+        path-pattern: "/ai/api/v1/chat/threads/*/stream"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-enterprise-selector
+        methods: [ "GET" ]
+        path-pattern: "/charger/api/v1/admin/enterprises"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-network-selector
+        methods: [ "GET" ]
+        path-pattern: "/charger/api/v1/admin/networks"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-location-selector
+        methods: [ "GET" ]
+        path-pattern: "/charger/api/v1/admin/locations"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-access-self
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/admin/access/me"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-terms-read
+        methods: [ "GET" ]
+        path-pattern: "/user/api/v1/terms/**"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
+      - name: support-terms-accept
+        methods: [ "POST" ]
+        path-pattern: "/user/api/v1/terms/accept"
+        effect: ALLOW
+        required-roles: [ "SUPPORT" ]
       - name: pnc-mobility-contract-admin-read
         methods: [ "GET" ]
         path-pattern: "/pnc/api/v1/admin/mobility-contracts"

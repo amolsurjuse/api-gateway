@@ -60,7 +60,26 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
         Authentication authentication = null;
 
         Authentication candidate = authenticationSupplier.get();
+        if (antPathMatcher.match("/session/api/v1/sessions/admin/*/diagnostics", path)) {
+            // This restriction cannot be widened by a hierarchy or a generic read-only allow rule.
+            boolean analysisRole = !isAnonymous(candidate) && candidate.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch(role -> "ROLE_SYSTEM_ADMIN".equals(role) || "ROLE_SUPPORT".equals(role));
+            if (!analysisRole) return new AuthorizationDecision(false);
+        }
+        if (!isAnonymous(candidate)) {
+            Set<String> roles = extractRoles(candidate, currentPolicy.roleHierarchy());
+            if (roles.contains("SUPPORT") && !roles.contains("SYSTEM_ADMIN") && !roles.contains("ADMIN_READ_ONLY")
+                    && !SAFE_READ_ONLY_METHODS.contains(method) && !isReadOnlyAiChat(method, path)
+                    && !("POST".equals(method) && Set.of("/user/api/v1/terms/accept",
+                        "/auth/api/auth/login", "/auth/api/auth/refresh", "/auth/api/auth/logout").contains(path))) {
+                return new AuthorizationDecision(false);
+            }
+        }
         if (isReadOnlyAdmin(candidate, currentPolicy.roleHierarchy())) {
+            if (isReadOnlyAiChat(method, path)) {
+                return new AuthorizationDecision(true);
+            }
             if (!SAFE_READ_ONLY_METHODS.contains(method)) {
                 log.debug("RBAC decision: method={} path={} principal={} granted=false reason=read-only-method",
                         method, path, principal(candidate));
@@ -125,6 +144,10 @@ public class ApiPolicyAuthorizationManager implements AuthorizationManager<Reque
                     method, path, principal(authentication), granted);
         }
         return new AuthorizationDecision(granted);
+    }
+
+    private boolean isReadOnlyAiChat(String method, String path) {
+        return "POST".equals(method) && "/ai/api/v1/chat/messages".equals(path);
     }
 
     private boolean denyApplies(CompiledRule rule, Authentication authentication, RoleHierarchy roleHierarchy) {
